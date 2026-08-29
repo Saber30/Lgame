@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>帖子详情 · LGame 工作室</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎮</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a href="/" class="logo">LGame<span>工作室</span></a>
+      <div class="nav-links">
+        <a href="/news.html">📰 新闻</a>
+        <a href="/insight.html">🎮 心得</a>
+        <a href="/learn.html">📚 学习</a>
+        <a href="/daily.html">📝 日报</a>
+        <div id="nav-auth" class="nav-auth"></div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <a href="/" class="back-link" id="back-link">← 返回列表</a>
+    <article id="post-detail" class="post-detail"></article>
+
+    <section class="comments-section">
+      <h2 id="comments-title">评论</h2>
+      <div id="comment-list"></div>
+      <form id="comment-form" class="comment-form" hidden>
+        <textarea id="comment-input" rows="3" maxlength="2000" required placeholder="说点什么…"></textarea>
+        <button class="btn btn-primary" type="submit">发表评论</button>
+      </form>
+      <div id="comment-login-tip" class="login-tip" hidden>👉 <a href="/login.html">登录</a> 后参与评论</div>
+    </section>
+  </main>
+
+  <footer class="site-footer">LGame 工作室 · lgame.men</footer>
+
+  <script src="/js/common.js"></script>
+  <script>
+    (async function () {
+      await loadCurrentUser();
+      const detail = document.getElementById('post-detail');
+      const id = new URLSearchParams(location.search).get('id');
+      if (!id) {
+        detail.innerHTML = '<div class="empty">缺少帖子 ID</div>';
+        return;
+      }
+
+      let data;
+      try {
+        data = await API.get('/posts/' + id);
+      } catch (e) {
+        detail.innerHTML = '<div class="empty">' + escapeHtml(e.message) + '</div>';
+        return;
+      }
+      const p = data.post;
+
+      // 返回链接指回对应板块
+      document.getElementById('back-link').href = (CATEGORY[p.category] || { href: '/' }).href;
+
+      let bodyHtml;
+      if (p.category === 'daily') {
+        let meta = {};
+        try {
+          meta = JSON.parse(p.meta || '{}');
+        } catch {}
+        bodyHtml = `
+          <div class="daily-block"><h4>✅ 今天完成</h4><p>${escapeHtml(meta.done || '（空）')}</p></div>
+          <div class="daily-block"><h4>📋 明日计划</h4><p>${escapeHtml(meta.plan || '（空）')}</p></div>
+          <div class="daily-block"><h4>⚠️ 遇到的问题</h4><p>${escapeHtml(meta.issues || '（无）')}</p></div>`
+          + (p.content ? `<div class="post-content" style="margin-top:14px">${escapeHtml(p.content)}</div>` : '');
+      } else {
+        bodyHtml = `<div class="post-content">${escapeHtml(p.content)}</div>`
+          + (p.link
+            ? `<a class="btn btn-outline source-btn" href="${escapeHtml(p.link)}" target="_blank" rel="noopener">查看原文 ↗</a>`
+            : '');
+      }
+
+      detail.innerHTML = `
+        <div class="post-meta">
+          ${categoryBadge(p.category)}
+          <span class="post-author">${escapeHtml(p.author_name)}</span>
+          <span class="post-time">${fmtTime(p.created_at)}</span>
+        </div>
+        <h1>${escapeHtml(p.title)}</h1>
+        ${bodyHtml}
+        ${data.canDelete ? '<div class="post-actions"><button class="btn btn-danger btn-sm" id="delete-post">删除这篇帖子</button></div>' : ''}`;
+
+      if (data.canDelete) {
+        document.getElementById('delete-post').addEventListener('click', async () => {
+          if (!confirm('确定删除这篇帖子吗？删除后无法恢复。')) return;
+          try {
+            await API.del('/posts/' + p.id);
+            toast('已删除');
+            location.href = (CATEGORY[p.category] || { href: '/' }).href;
+          } catch (e) {
+            toast(e.message, false);
+          }
+        });
+      }
+
+      // ---- 评论 ----
+      const list = document.getElementById('comment-list');
+      const form = document.getElementById('comment-form');
+      const tip = document.getElementById('comment-login-tip');
+      document.getElementById('comments-title').textContent = `评论（${data.comments.length}）`;
+      renderComments();
+      if (currentUser) form.hidden = false;
+      else tip.hidden = false;
+
+      function renderComments() {
+        list.innerHTML = data.comments.length
+          ? data.comments
+              .map(
+                (c) => `
+        <div class="comment">
+          <div class="comment-head"><strong>${escapeHtml(c.author_name)}</strong><span>${timeAgo(c.created_at)}</span></div>
+          <p>${escapeHtml(c.content)}</p>
+        </div>`
+              )
+              .join('')
+          : '<div class="empty">还没有评论，来抢沙发</div>';
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = form.querySelector('button');
+        btn.disabled = true;
+        try {
+          await API.post(`/posts/${p.id}/comments`, { content: document.getElementById('comment-input').value });
+          location.reload();
+        } catch (err) {
+          toast(err.message, false);
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

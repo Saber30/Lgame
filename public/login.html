@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 · LGame 工作室</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎮</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a href="/" class="logo">LGame<span>工作室</span></a>
+      <div class="nav-links">
+        <a href="/news.html">📰 新闻</a>
+        <a href="/insight.html">🎮 心得</a>
+        <a href="/learn.html">📚 学习</a>
+        <a href="/daily.html">📝 日报</a>
+        <div id="nav-auth" class="nav-auth"></div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <h1>👋 欢迎回来</h1>
+        <form id="login-form">
+          <label for="f-account">用户名或邮箱</label>
+          <input id="f-account" required autocomplete="username" placeholder="用户名 或 邮箱">
+          <label for="f-password">密码</label>
+          <input id="f-password" type="password" required autocomplete="current-password" placeholder="你的密码">
+          <button class="btn btn-primary btn-block" type="submit">登 录</button>
+        </form>
+        <p class="auth-switch">还没有账号？<a href="/register.html">注册一个</a></p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">LGame 工作室 · lgame.men</footer>
+
+  <script src="/js/common.js"></script>
+  <script>
+    (async function () {
+      await loadCurrentUser();
+      const params = new URLSearchParams(location.search);
+      let redirectTo = params.get('redirect') || '/';
+      if (!redirectTo.startsWith('/') || redirectTo.startsWith('//')) redirectTo = '/';
+
+      document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = '登录中…';
+        try {
+          await API.post('/login', {
+            account: document.getElementById('f-account').value.trim(),
+            password: document.getElementById('f-password').value,
+          });
+          location.href = redirectTo;
+        } catch (err) {
+          toast(err.message, false);
+          btn.disabled = false;
+          btn.textContent = '登 录';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

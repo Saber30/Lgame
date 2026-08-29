@@ -1,0 +1,49 @@
+-- LGame 工作室 · 数据库表结构
+-- 部署时：在 Cloudflare 控制台的 D1 数据库 -> Console 里粘贴执行本文件全部内容
+
+-- 用户表（第一个注册的用户自动成为 admin）
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'member',  -- 'admin' | 'member'
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 登录会话表（30 天有效期）
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 帖子表（四个分类共用）
+-- category: news=游戏新闻, insight=游戏心得, learn=学习园地, daily=工作日报
+-- meta: 仅日报使用，JSON 格式 {"done":"...","plan":"...","issues":"..."}
+CREATE TABLE IF NOT EXISTS posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('news','insight','learn','daily')),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL DEFAULT '',
+  link TEXT,
+  meta TEXT,
+  status TEXT NOT NULL DEFAULT 'approved',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 评论表
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);

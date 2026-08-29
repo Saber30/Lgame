@@ -1,0 +1,11 @@
+# 本地开发配置（可选）：复制本文件为 wrangler.toml 并填入真实 database_id
+# database_id 可在 Cloudflare 控制台 -> D1 数据库页面查看
+# 线上部署走 GitHub + Pages 仪表盘，不依赖本文件
+name = "lgame"
+compatibility_date = "2024-09-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lgame-db"
+database_id = "在这里填入你的数据库ID"

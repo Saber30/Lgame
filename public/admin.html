@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 · LGame 工作室</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎮</text></svg>">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="nav">
+      <a href="/" class="logo">LGame<span>工作室</span></a>
+      <div class="nav-links">
+        <a href="/news.html">📰 新闻</a>
+        <a href="/insight.html">🎮 心得</a>
+        <a href="/learn.html">📚 学习</a>
+        <a href="/daily.html">📝 日报</a>
+        <div id="nav-auth" class="nav-auth"></div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="page-head">
+      <h1>⚙️ 管理后台</h1>
+      <p>管理工作室成员与站内内容</p>
+    </div>
+
+    <div id="no-permission" class="empty" hidden>
+      需要管理员权限才能访问此页面<br>
+      <a href="/">返回首页</a>
+    </div>
+
+    <div id="admin-content" hidden>
+      <div class="stats-grid" id="stats-grid"></div>
+
+      <section class="admin-section">
+        <h2>👥 成员管理</h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr><th>ID</th><th>用户名</th><th>邮箱</th><th>帖子</th><th>评论</th><th>注册时间</th><th>操作</th></tr>
+            </thead>
+            <tbody id="user-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <h2>📄 最新帖子</h2>
+        <div id="admin-post-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">LGame 工作室 · lgame.men</footer>
+
+  <script src="/js/common.js"></script>
+  <script>
+    (async function () {
+      await loadCurrentUser();
+      if (!currentUser || currentUser.role !== 'admin') {
+        document.getElementById('no-permission').hidden = false;
+        return;
+      }
+      const root = document.getElementById('admin-content');
+      root.hidden = false;
+
+      try {
+        // 数据统计
+        const s = await API.get('/stats');
+        document.getElementById('stats-grid').innerHTML = `
+          <div class="stat-card"><div class="stat-num">${s.users}</div><div>成员</div></div>
+          <div class="stat-card"><div class="stat-num">${s.posts.news}</div><div>游戏新闻</div></div>
+          <div class="stat-card"><div class="stat-num">${s.posts.insight}</div><div>游戏心得</div></div>
+          <div class="stat-card"><div class="stat-num">${s.posts.learn}</div><div>学习园地</div></div>
+          <div class="stat-card"><div class="stat-num">${s.posts.daily}</div><div>工作日报</div></div>
+          <div class="stat-card"><div class="stat-num">${s.comments}</div><div>评论</div></div>`;
+
+        // 成员列表
+        const ud = await API.get('/users');
+        document.getElementById('user-tbody').innerHTML = ud.users
+          .map(
+            (u) => `
+        <tr>
+          <td>${u.id}</td>
+          <td>${escapeHtml(u.username)}${u.role === 'admin' ? '<span class="badge badge-admin">管理员</span>' : ''}</td>
+          <td class="text-dim">${escapeHtml(u.email)}</td>
+          <td>${u.post_count}</td>
+          <td>${u.comment_count}</td>
+          <td class="text-dim">${fmtDate(u.created_at)}</td>
+          <td>${
+            u.id === currentUser.id
+              ? '<span class="text-dim">当前账号</span>'
+              : `<span class="admin-actions">
+                   <button class="btn btn-outline btn-sm" data-action="role" data-id="${u.id}" data-role="${u.role === 'admin' ? 'member' : 'admin'}">${u.role === 'admin' ? '设为成员' : '设为管理员'}</button>
+                   <button class="btn btn-danger btn-sm" data-action="delete-user" data-id="${u.id}">删除</button>
+                 </span>`
+          }</td>
+        </tr>`
+          )
+          .join('');
+
+        // 最新帖子
+        const pd = await API.get('/posts?pageSize=30');
+        document.getElementById('admin-post-list').innerHTML = pd.posts.length
+          ? pd.posts
+              .map(
+                (p) => `
+        <div class="admin-post-row">
+          ${categoryBadge(p.category)}
+          <a class="admin-post-title" href="/post.html?id=${p.id}">${escapeHtml(p.title)}</a>
+          <span class="text-dim">${escapeHtml(p.author_name)} · ${timeAgo(p.created_at)}</span>
+          <button class="btn btn-danger btn-sm" data-action="delete-post" data-id="${p.id}">删除</button>
+        </div>`
+              )
+              .join('')
+          : '<div class="empty">还没有帖子</div>';
+      } catch (e) {
+        toast(e.message, false);
+      }
+
+      // 统一处理管理操作
+      root.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        try {
+          if (action === 'role') {
+            const toAdmin = btn.dataset.role === 'admin';
+            if (!confirm(toAdmin ? '确定将该成员设为管理员吗？' : '确定将该管理员降为普通成员吗？')) return;
+            await API.patch('/users/' + id, { role: btn.dataset.role });
+          } else if (action === 'delete-user') {
+            if (!confirm('确定删除该成员？TA 发布的所有帖子和评论也会一起删除。')) return;
+            await API.del('/users/' + id);
+          } else if (action === 'delete-post') {
+            if (!confirm('确定删除这篇帖子？')) return;
+            await API.del('/posts/' + id);
+          } else {
+            return;
+          }
+          location.reload();
+        } catch (err) {
+          toast(err.message, false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
