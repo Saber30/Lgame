@@ -12,4 +12,4 @@ directory = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "lgame-db"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "7f01669b-e185-4f03-827d-2f9023ec922a"
