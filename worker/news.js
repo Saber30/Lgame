@@ -34,12 +34,12 @@ export async function runNewsCrawler(env) {
         if (feed.region === 'overseas') {
           // 标题+摘要合并成一次翻译，节省 subrequest 配额（免费计划限制 50 次/调用）
           const shortDesc = stripHtml(decodeEntities(description)).slice(0, 500);
-          const combined = title + '\n[[SEP]]\n' + shortDesc;
+          const combined = title + '\n|||\n' + shortDesc;
           const translated = await translateText(env, combined, errors);
-          const sepIdx = translated.indexOf('[[SEP]]');
+          const sepIdx = translated.indexOf('|||');
           if (sepIdx >= 0) {
             title = translated.slice(0, sepIdx).trim() || title;
-            description = translated.slice(sepIdx + 7).trim() || description;
+            description = translated.slice(sepIdx + 3).trim() || description;
           } else {
             title = translated.trim() || title;
           }
@@ -131,12 +131,18 @@ async function translateText(env, text, errors) {
     return cleaned;
   }
   try {
-    const res = await env.AI.run('@cf/meta/m2m100-1.2b', {
-      text: cleaned.slice(0, 800),
-      source_lang: 'english',
-      target_lang: 'chinese',
+    const res = await env.AI.run('@cf/qwen/qwen1.5-7b-chat-awq', {
+      messages: [
+        {
+          role: 'system',
+          content:
+            '你是翻译助手。把用户输入的英文翻译成简体中文，只输出译文，不要任何解释。如果输入里有 ||| 分隔符，输出必须保留同样的 ||| 分隔符。',
+        },
+        { role: 'user', content: cleaned.slice(0, 1200) },
+      ],
+      max_tokens: 1024,
     });
-    return (res && res.translated_text) || cleaned;
+    return (res && res.response) || cleaned;
   } catch (e) {
     pushOnce(errors, '翻译失败: ' + (e && e.message ? e.message : String(e)));
     return cleaned;
