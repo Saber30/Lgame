@@ -1,7 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh-CN" class="dark">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // 首屏前根据本地偏好设置主题，避免闪烁
+    (function () {
+      var t = localStorage.getItem('lgame-theme');
+      if (t === 'light') document.documentElement.classList.remove('dark');
+      else document.documentElement.classList.add('dark');
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="LGame 工作室内部社区：游戏新闻、游戏心得、学习园地与工作日报" />
   <title>LGame 工作室</title>

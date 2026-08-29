@@ -183,24 +183,29 @@ async function handleLogout(request, env) {
   });
 }
 
-async function handleListPosts(url, env) {
+async function handleListPosts(url, env, request) {
   const category = url.searchParams.get('category');
   if (category && !VALID_CATEGORIES.includes(category)) fail('分类不正确');
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10) || 1);
   const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize') || '10', 10) || 10));
+
+  const user = await currentUser(request, env);
+  const uid = user ? user.id : 0;
 
   const where = category ? "WHERE p.category = ? AND p.status = 'approved'" : "WHERE p.status = 'approved'";
   const args = category ? [category] : [];
 
   const { results } = await env.DB.prepare(
     `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.meta, p.created_at,
-            u.username AS author_name
+            u.username AS author_name,
+            (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS like_count,
+            (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id AND l.user_id = ?) AS liked_by_me
        FROM posts p JOIN users u ON u.id = p.user_id
       ${where}
       ORDER BY p.created_at DESC, p.id DESC
       LIMIT ? OFFSET ?`
   )
-    .bind(...args, pageSize, (page - 1) * pageSize)
+    .bind(uid, ...args, pageSize, (page - 1) * pageSize)
     .all();
 
   const { total } = await env.DB.prepare(`SELECT COUNT(*) AS total FROM posts p ${where}`)
@@ -253,13 +258,18 @@ async function handleCreatePost(request, env) {
 }
 
 async function handleGetPost(env, request, id) {
+  const user = await currentUser(request, env);
+  const uid = user ? user.id : 0;
+
   const post = await env.DB.prepare(
     `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.meta, p.status, p.created_at,
-            u.username AS author_name
+            u.username AS author_name,
+            (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS like_count,
+            (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id AND l.user_id = ?) AS liked_by_me
        FROM posts p JOIN users u ON u.id = p.user_id
       WHERE p.id = ?`
   )
-    .bind(id)
+    .bind(uid, id)
     .first();
   if (!post || post.status !== 'approved') fail('帖子不存在', 404);
 
@@ -272,9 +282,8 @@ async function handleGetPost(env, request, id) {
     .bind(id)
     .all();
 
-  const user = await currentUser(request, env);
   const canDelete = !!user && (user.id === post.author_id || user.role === 'admin');
-  return json({ post, comments: results, canDelete });
+  return json({ post, comments: results, canDelete, canEdit: canDelete });
 }
 
 async function handleDeletePost(env, request, id) {
@@ -285,9 +294,53 @@ async function handleDeletePost(env, request, id) {
 
   await env.DB.batch([
     env.DB.prepare('DELETE FROM comments WHERE post_id = ?').bind(id),
+    env.DB.prepare('DELETE FROM likes WHERE post_id = ?').bind(id),
     env.DB.prepare('DELETE FROM posts WHERE id = ?').bind(id),
   ]);
   return json({ ok: true });
+}
+
+async function handleUpdatePost(request, env, id) {
+  const user = await requireUser(request, env);
+  const post = await env.DB.prepare('SELECT id, user_id, category FROM posts WHERE id = ?').bind(id).first();
+  if (!post) fail('帖子不存在', 404);
+  if (user.id !== post.user_id && user.role !== 'admin') fail('没有权限编辑这篇帖子', 403);
+
+  const body = await readJson(request);
+  let title;
+  let content = '';
+  let link = null;
+  let meta = null;
+
+  if (post.category === 'daily') {
+    const done = String(body.done || '').trim();
+    const plan = String(body.plan || '').trim();
+    const issues = String(body.issues || '').trim();
+    if (!done && !plan && !issues) fail('日报内容不能为空');
+    title = String(body.title || '').trim();
+    if (!title) {
+      const now = new Date();
+      title = `${now.getUTCMonth() + 1}月${now.getUTCDate()}日 日报`;
+    }
+    meta = JSON.stringify({ done, plan, issues });
+  } else {
+    title = String(body.title || '').trim();
+    content = String(body.content || '').trim();
+    if (!title) fail('标题不能为空');
+    if (!content) fail('内容不能为空');
+    if (post.category === 'news' && body.link) {
+      link = String(body.link).trim();
+      if (!/^https?:\/\//i.test(link)) fail('链接必须以 http:// 或 https:// 开头');
+      if (link.length > 500) fail('链接过长');
+    }
+  }
+  if (title.length > 100) fail('标题不能超过 100 字');
+  if (content.length > 10000) fail('内容不能超过 10000 字');
+
+  await env.DB.prepare('UPDATE posts SET title = ?, content = ?, link = ?, meta = ? WHERE id = ?')
+    .bind(title, content, link, meta, id)
+    .run();
+  return json({ ok: true, message: '已保存' });
 }
 
 async function handleAddComment(request, env, postId) {
@@ -308,6 +361,25 @@ async function handleAddComment(request, env, postId) {
     .bind(postId, user.id, content)
     .run();
   return json({ id: insert.meta.last_row_id, message: '评论成功' }, 201);
+}
+
+async function handleToggleLike(request, env, id) {
+  const user = await requireUser(request, env);
+  const post = await env.DB.prepare(`SELECT id FROM posts WHERE id = ? AND status = 'approved'`)
+    .bind(id)
+    .first();
+  if (!post) fail('帖子不存在', 404);
+
+  const existing = await env.DB.prepare('SELECT 1 FROM likes WHERE user_id = ? AND post_id = ?')
+    .bind(user.id, id)
+    .first();
+  if (existing) {
+    await env.DB.prepare('DELETE FROM likes WHERE user_id = ? AND post_id = ?').bind(user.id, id).run();
+  } else {
+    await env.DB.prepare('INSERT INTO likes (user_id, post_id) VALUES (?, ?)').bind(user.id, id).run();
+  }
+  const { c } = await env.DB.prepare('SELECT COUNT(*) AS c FROM likes WHERE post_id = ?').bind(id).first();
+  return json({ liked: !existing, like_count: c });
 }
 
 async function handleListUsers(request, env) {
@@ -342,11 +414,36 @@ async function handleDeleteUser(request, env, id) {
   if (!target) fail('用户不存在', 404);
   await env.DB.batch([
     env.DB.prepare('DELETE FROM comments WHERE user_id = ?').bind(id),
+    env.DB.prepare('DELETE FROM likes WHERE user_id = ?').bind(id),
     env.DB.prepare('DELETE FROM posts WHERE user_id = ?').bind(id),
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(id),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(id),
   ]);
   return json({ ok: true });
+}
+
+function generateTempPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  let out = '';
+  for (let i = 0; i < 10; i++) out += chars[bytes[i] % chars.length];
+  return out;
+}
+
+async function handleResetPassword(request, env, id) {
+  const admin = await requireAdmin(request, env);
+  if (!Number.isInteger(id)) fail('参数错误');
+  if (id === admin.id) fail('不能重置自己的密码');
+  const target = await env.DB.prepare('SELECT id FROM users WHERE id = ?').bind(id).first();
+  if (!target) fail('用户不存在', 404);
+
+  const newPassword = generateTempPassword();
+  const hash = await hashPassword(newPassword);
+  await env.DB.batch([
+    env.DB.prepare('UPDATE users SET password_hash = ? WHERE id = ?').bind(hash, id),
+    env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(id),
+  ]);
+  return json({ ok: true, password: newPassword, message: '密码已重置，请把新密码转告该成员' });
 }
 
 async function handleStats(request, env) {
@@ -383,7 +480,7 @@ export async function handleApi(request, env) {
       }
       if (seg[0] === 'stats' && method === 'GET') return await handleStats(request, env);
       if (seg[0] === 'posts') {
-        if (method === 'GET') return await handleListPosts(url, env);
+        if (method === 'GET') return await handleListPosts(url, env, request);
         if (method === 'POST') return await handleCreatePost(request, env);
       }
       if (seg[0] === 'users' && method === 'GET') return await handleListUsers(request, env);
@@ -393,6 +490,7 @@ export async function handleApi(request, env) {
       const id = Number(seg[1]);
       if (!Number.isInteger(id)) fail('参数错误');
       if (method === 'GET') return await handleGetPost(env, request, id);
+      if (method === 'PATCH') return await handleUpdatePost(request, env, id);
       if (method === 'DELETE') return await handleDeletePost(env, request, id);
     }
 
@@ -402,11 +500,23 @@ export async function handleApi(request, env) {
       return await handleAddComment(request, env, id);
     }
 
+    if (seg[0] === 'posts' && seg.length === 3 && seg[2] === 'like' && method === 'POST') {
+      const id = Number(seg[1]);
+      if (!Number.isInteger(id)) fail('参数错误');
+      return await handleToggleLike(request, env, id);
+    }
+
     if (seg[0] === 'users' && seg.length === 2) {
       const id = Number(seg[1]);
       if (!Number.isInteger(id)) fail('参数错误');
       if (method === 'PATCH') return await handleUpdateUser(request, env, id);
       if (method === 'DELETE') return await handleDeleteUser(request, env, id);
+    }
+
+    if (seg[0] === 'users' && seg.length === 3 && seg[2] === 'reset-password' && method === 'POST') {
+      const id = Number(seg[1]);
+      if (!Number.isInteger(id)) fail('参数错误');
+      return await handleResetPassword(request, env, id);
     }
 
     return json({ error: '接口不存在' }, 404);

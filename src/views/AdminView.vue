@@ -87,6 +87,24 @@ async function deletePost(p) {
   }
 }
 
+async function resetPassword(u) {
+  try {
+    await ElMessageBox.confirm(`确定重置「${u.username}」的密码吗？重置后原密码立即失效。`, '提示', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    const data = await api.post(`/users/${u.id}/reset-password`)
+    await ElMessageBox.alert(`新密码：${data.password}`, '密码已重置', {
+      confirmButtonText: '知道了',
+    })
+  } catch (e) {
+    ElMessage.error(e.message)
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -122,13 +140,14 @@ onMounted(load)
         <el-table-column label="注册时间" width="120">
           <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220">
+        <el-table-column label="操作" width="330">
           <template #default="{ row }">
             <span v-if="row.id === auth.user?.id" class="text-dim">当前账号</span>
             <template v-else>
               <el-button size="small" @click="toggleRole(row)">
                 {{ row.role === 'admin' ? '设为成员' : '设为管理员' }}
               </el-button>
+              <el-button size="small" @click="resetPassword(row)">重置密码</el-button>
               <el-button size="small" type="danger" plain @click="deleteUser(row)">删除</el-button>
             </template>
           </template>

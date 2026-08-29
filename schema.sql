@@ -43,7 +43,16 @@ CREATE TABLE IF NOT EXISTS comments (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- 点赞表（user_id + post_id 联合主键，防止重复点赞）
+CREATE TABLE IF NOT EXISTS likes (
+  user_id INTEGER NOT NULL,
+  post_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, post_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);

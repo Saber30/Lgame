@@ -22,6 +22,7 @@ const excerpt = computed(() => {
       <span class="badge" :class="'badge-' + post.category">{{ categoryLabel(post.category) }}</span>
       <span class="post-author">{{ post.author_name }}</span>
       <span class="post-time">{{ timeAgo(post.created_at) }}</span>
+      <span v-if="post.like_count" class="post-time">👍 {{ post.like_count }}</span>
     </div>
     <h3 class="post-title">{{ post.title }}</h3>
     <p v-if="excerpt" class="post-excerpt">{{ excerpt }}</p>

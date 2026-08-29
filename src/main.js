@@ -6,6 +6,7 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import App from './App.vue'
 import router from './router'
+import { useThemeStore } from './stores/theme'
 import './styles/main.css'
 
 const app = createApp(App)
@@ -13,5 +14,8 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
+
+// 应用初始主题（深色/浅色）
+useThemeStore().init()
 
 app.mount('#app')

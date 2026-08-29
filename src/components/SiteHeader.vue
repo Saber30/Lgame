@@ -1,8 +1,10 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useThemeStore } from '../stores/theme'
 
 const auth = useAuthStore()
+const theme = useThemeStore()
 const router = useRouter()
 
 async function onLogout() {
@@ -21,6 +23,9 @@ async function onLogout() {
         <router-link to="/learn">📚 学习</router-link>
         <router-link to="/daily">📝 日报</router-link>
         <div class="nav-auth">
+          <a href="#" class="theme-toggle" :title="theme.theme === 'dark' ? '切换到浅色' : '切换到深色'" @click.prevent="theme.toggle()">
+            {{ theme.theme === 'dark' ? '☀️' : '🌙' }}
+          </a>
           <template v-if="auth.isLoggedIn">
             <span class="nav-username">👋 {{ auth.user.username }}</span>
             <router-link v-if="auth.isAdmin" to="/admin">管理</router-link>
