@@ -32,8 +32,17 @@ export async function runNewsCrawler(env) {
         let title = item.title;
         let description = item.description || '';
         if (feed.region === 'overseas') {
-          title = await translateText(env, title, errors);
-          description = await translateText(env, description, errors);
+          // 标题+摘要合并成一次翻译，节省 subrequest 配额（免费计划限制 50 次/调用）
+          const shortDesc = stripHtml(decodeEntities(description)).slice(0, 500);
+          const combined = title + '\n[[SEP]]\n' + shortDesc;
+          const translated = await translateText(env, combined, errors);
+          const sepIdx = translated.indexOf('[[SEP]]');
+          if (sepIdx >= 0) {
+            title = translated.slice(0, sepIdx).trim() || title;
+            description = translated.slice(sepIdx + 7).trim() || description;
+          } else {
+            title = translated.trim() || title;
+          }
         }
 
         await env.DB.prepare(
