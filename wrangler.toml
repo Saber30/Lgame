@@ -1,0 +1,15 @@
+# Cloudflare Workers 部署配置
+# database_id 需要替换为真实值：控制台 -> Storage & Databases -> lgame-db -> 概览页的 Database ID
+name = "lgame"
+main = "src/index.js"
+compatibility_date = "2024-09-01"
+
+# 静态资源目录：前端所有页面，未匹配到文件的请求才会进入 Worker
+[assets]
+directory = "public"
+
+# D1 数据库绑定，变量名必须是 DB（代码中通过 env.DB 访问）
+[[d1_databases]]
+binding = "DB"
+database_name = "lgame-db"
+database_id = "00000000-0000-0000-0000-000000000000"

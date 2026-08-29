@@ -1,8 +1,8 @@
 # 🎮 LGame 工作室网站（lgame.men）
 
-为独立游戏工作室打造的内部社区网站，代码托管在 GitHub，通过 Cloudflare Pages 自动部署。
+为独立游戏工作室打造的内部社区网站，代码托管在 GitHub，通过 Cloudflare Workers 自动部署。
 
-**技术栈**：纯 HTML / CSS / JavaScript 前端（无需构建）+ Cloudflare Pages Functions 后端 + Cloudflare D1 数据库（SQLite）。全部功能都在 Cloudflare 免费额度内，无需付费。
+**技术栈**：纯 HTML / CSS / JavaScript 前端（无需构建）+ Cloudflare Workers（后端 API + 静态资源托管）+ Cloudflare D1 数据库（SQLite）。全部功能都在 Cloudflare 免费额度内，无需付费。
 
 ## 功能一览
 
@@ -22,7 +22,7 @@
 
 ```
 lgame/
-├── public/               # 前端静态文件（Pages 部署目录）
+├── public/               # 前端静态页面（Workers 自动托管）
 │   ├── index.html        # 首页
 │   ├── login.html        # 登录
 │   ├── register.html     # 注册
@@ -34,80 +34,49 @@ lgame/
 │   ├── admin.html        # 管理后台
 │   ├── css/style.css     # 全站样式
 │   └── js/common.js      # 公共脚本（API 封装、登录态、通用渲染）
-├── functions/
-│   └── api/[[route]].js  # 后端 API（处理所有 /api/* 请求）
-├── schema.sql            # 数据库表结构（部署时在 D1 控制台执行）
-├── wrangler.toml.example # 本地开发配置模板（可选，不影响线上）
+├── src/
+│   ├── index.js          # Worker 入口：/api/* 转给 API 处理，其余走静态资源
+│   └── api.js            # 后端 API（注册/登录/帖子/评论/管理员）
+├── schema.sql            # 数据库表结构（在 D1 控制台执行一次即可）
+├── wrangler.toml         # Workers 部署配置（含 D1 数据库绑定）
 └── README.md
 ```
 
-## 部署步骤（从零到上线，约 20 分钟）
+## 部署步骤
 
-### 第 0 步：准备
-
-- ✅ Cloudflare 账号（域名 lgame.men 已接入 Cloudflare）
-- ✅ GitHub 账号
-- ✅ 本项目代码
-
-### 第 1 步：把代码推送到 GitHub
-
-1. 打开 [github.com](https://github.com)，右上角 **+** → **New repository**
-2. 名称填 `lgame`，Public / Private 均可 → **Create repository**
-3. 在本项目文件夹打开终端（Git Bash），把 `你的用户名` 替换成你的 GitHub 用户名后执行：
-
-```bash
-git init -b main
-git remote add origin https://github.com/你的用户名/lgame.git
-git add -A
-git commit -m "init: LGame 工作室网站"
-git push -u origin main
-```
-
-### 第 2 步：创建 D1 数据库
+### 第 1 步：创建 D1 数据库并初始化
 
 1. 登录 [dash.cloudflare.com](https://dash.cloudflare.com)
 2. 左侧菜单 **Storage & Databases（存储和数据库）** → **D1 SQL Database** → **Create database**
 3. 数据库名称填 `lgame-db` → 创建
-4. 进入数据库页面，切到 **Console（控制台）** 标签
-5. 打开本项目的 `schema.sql`，**复制全部内容**粘贴进 Console，点 **Execute（执行）**
-6. 执行成功后数据库里会有 4 张表：users / sessions / posts / comments
+4. 进入数据库页面 → **Console（控制台）** 标签 → 把 `schema.sql` 的全部内容粘贴进去 → **Execute（执行）**
+5. 在数据库的 **概览页** 找到 **Database ID**（一串 UUID），后面第 3 步要用
 
-### 第 3 步：创建 Pages 项目（连接 GitHub 自动部署）
+### 第 2 步：填写 database_id
 
-1. 左侧菜单 **Compute (Workers & Pages)** → **Create** → 切到 **Pages** 标签 → **Connect to Git**
-2. 授权 GitHub，选择 `lgame` 仓库 → **Begin setup**
-3. 构建设置：
-   - **Framework preset**：`None`
-   - **Build command**：留空
-   - **Build output directory**：`public`
-4. 点 **Save and Deploy**，等待约 1 分钟部署完成
-5. 此时网站有临时地址（形如 `lgame-xxxx.pages.dev`），可以先点开看看
+打开仓库根目录的 `wrangler.toml`，把 `database_id` 那一行的占位值替换成上一步复制 Database ID。这一步不能省，否则后端连不上数据库。
 
-### 第 4 步：绑定数据库（关键！）
+### 第 3 步：创建 Worker 并连接 GitHub
 
-1. 进入刚创建的 Pages 项目 → **Settings（设置）** → **Bindings（绑定）**
-2. 点 **Add（添加）** → 选 **D1 database**：
-   - **Variable name（变量名称）**：`DB` ← 必须叫这个名字，代码里用的就是它
-   - **D1 database**：选择刚建的 `lgame-db`
-3. 保存后，进入 **Deployments（部署）** 页面，点最新一条部署右侧的 `⋯` → **Retry deployment**
+1. 左侧菜单 **Compute (Workers & Pages)** → **Create** → **Import a Git repository（导入 Git 仓库）**
+2. 授权 GitHub，选择 `Lgame` 仓库
+3. 构建设置保持默认即可（Cloudflare 会读取仓库里的 `wrangler.toml`）
+4. 点 **Deploy**，等待部署完成，会得到一个 `xxx.workers.dev` 的临时网址
 
-> 绑定数据库后必须重新部署一次，否则所有 API 都会报「服务器内部错误」。
+> 已经创建过 Worker 的：进入该 Worker → **Settings → Build**，确认连接了 GitHub 仓库；之后每次 `git push` 会自动重新部署。
 
-### 第 5 步：绑定域名 lgame.men
+### 第 4 步：绑定域名 lgame.men
 
-1. Pages 项目 → **Custom domains（自定义域）** → **Set up a custom domain**
-2. 输入 `lgame.men` → 按提示 **Continue / Activate**
-3. 域名就在同一个 Cloudflare 账号里，DNS 记录会自动配置，几分钟内生效
+1. Worker 项目 → **Settings（设置）** → **Domains & Routes（域和路由）**
+2. **Add（添加）** → **Custom domain（自定义域）** → 输入 `lgame.men`
+3. 域名在同一个 Cloudflare 账号里，DNS 会自动配置，几分钟生效
 4. （可选）再添加 `www.lgame.men`
 
-### 第 6 步：注册第一个账号
+### 第 5 步：注册第一个账号
 
-打开 `https://lgame.men/register.html` 注册——**第一个注册的用户自动成为管理员**。
-之后把网址发给工作室成员，大家自行注册即可。
+打开网站 `/register.html` 注册——**第一个注册的用户自动成为管理员**。之后把网址发给工作室成员，大家自行注册即可。
 
 ## 日常使用：改代码 → 自动上线
-
-网站和 GitHub 仓库是联动的，以后想改任何东西（文字、样式、功能），改完执行：
 
 ```bash
 git add -A
@@ -115,12 +84,21 @@ git commit -m "描述一下改了什么"
 git push
 ```
 
-推送后约 1 分钟 Cloudflare 自动部署新版本，无需任何手动操作。
+推送后约 1 分钟 Cloudflare 自动部署新版本。
+
+## 本地开发（可选，需要 Node.js）
+
+```bash
+npx wrangler d1 execute lgame-db --local --file=schema.sql   # 初始化本地数据库
+npx wrangler dev                                             # 启动本地服务器
+```
+
+访问 http://localhost:8788 预览，本地数据与线上互不影响。
 
 ## 常见问题
 
-**Q：网页能打开，但登录/发帖都报「服务器内部错误」？**
-A：99% 是第 4 步的 D1 绑定没做，或绑定后忘了 Retry deployment。
+**Q：页面能打开，但注册/登录报「请求失败」或「服务器内部错误」？**
+A：说明线上跑的还是旧版本，或 D1 绑定没生效。检查 `wrangler.toml` 里的 `database_id` 是否为真实值，推送后等 1-2 分钟部署完成，或手动点一次部署。
 
 **Q：忘记密码怎么办？**
 A：目前没有邮箱找回功能。请管理员在「管理」页面删除该账号，让对方重新注册。
@@ -128,12 +106,5 @@ A：目前没有邮箱找回功能。请管理员在「管理」页面删除该�
 **Q：怎么增加管理员？**
 A：管理员登录后进入「管理」页面，在成员管理里点「设为管理员」。
 
-**Q：想先在本地跑起来预览？**（可选，需要 Node.js）
-A：把 `wrangler.toml.example` 复制为 `wrangler.toml`，填入你的 database_id（在 D1 数据库页面可查），然后：
-
-```bash
-npx wrangler d1 execute lgame-db --local --file=schema.sql
-npx wrangler pages dev public
-```
-
-访问 http://localhost:8788 即可。
+**Q：为什么访问 `/news.html` 会跳转到 `/news`？**
+A：Cloudflare 静态资源的默认行为，会自动把带 .html 的地址美化成不带后缀的地址，功能完全一样，不用管。

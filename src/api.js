@@ -1,6 +1,6 @@
 // LGame 工作室 · 后端 API
-// 运行在 Cloudflare Pages Functions 上，数据库为 D1 (SQLite)
-// 文件名 [[route]].js 表示拦截所有 /api/* 请求并按路径分发
+// 运行在 Cloudflare Workers 上，数据库为 D1 (SQLite)
+// 本文件导出 handleApi(request, env)，由 src/index.js 在 /api/* 路径下调用
 
 const ITERATIONS = 100000; // PBKDF2 迭代次数
 const SESSION_MAX_AGE = 30 * 24 * 3600; // 会话有效期 30 天（秒）
@@ -365,12 +365,12 @@ async function handleStats(request, env) {
 }
 
 // ---------------- 路由分发 ----------------
+// 按路径分发：/api/posts/3/comments -> ['posts', '3', 'comments']
 
-export async function onRequest(context) {
-  const { request, env, params } = context;
-  const seg = params.route || [];
+export async function handleApi(request, env) {
   const method = request.method;
   const url = new URL(request.url);
+  const seg = url.pathname.replace(/^\/api\/?/, '').split('/').filter(Boolean);
 
   try {
     if (seg.length === 1) {
