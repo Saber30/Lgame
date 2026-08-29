@@ -196,6 +196,24 @@ html.dark .post-card:hover { border-color: #3a4767; }
 .badge-learn { background: rgba(46, 213, 115, 0.12); color: #43e07d; }
 .badge-daily { background: rgba(255, 195, 66, 0.12); color: #ffc342; }
 .badge-admin { background: rgba(108, 92, 231, 0.16); color: #a99cf5; margin-left: 4px; }
+.badge-domestic { background: rgba(46, 213, 115, 0.14); color: #3ecf7e; }
+.badge-overseas { background: rgba(0, 210, 255, 0.14); color: #33c9f0; }
+
+/* ---- 新闻地区筛选 ---- */
+.region-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.region-tab {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 6px 18px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 14px;
+  transition: 0.15s;
+}
+.region-tab:hover { color: var(--text); }
+.region-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* ---- 发帖卡片 ---- */
 .compose-card {

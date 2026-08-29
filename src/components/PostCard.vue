@@ -14,12 +14,24 @@ const excerpt = computed(() => {
   }
   return (props.post.content || '').slice(0, 150)
 })
+
+const sourceMeta = computed(() => {
+  try {
+    return JSON.parse(props.post.meta || '{}')
+  } catch {
+    return {}
+  }
+})
+
+const region = computed(() => sourceMeta.value.region || '')
 </script>
 
 <template>
   <article class="post-card" @click="router.push('/post/' + post.id)">
     <div class="post-meta">
       <span class="badge" :class="'badge-' + post.category">{{ categoryLabel(post.category) }}</span>
+      <span v-if="region === 'domestic'" class="badge badge-domestic">国内</span>
+      <span v-if="region === 'overseas'" class="badge badge-overseas">国外</span>
       <span class="post-author">{{ post.author_name }}</span>
       <span class="post-time">{{ timeAgo(post.created_at) }}</span>
       <span v-if="post.like_count" class="post-time">👍 {{ post.like_count }}</span>

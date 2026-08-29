@@ -71,7 +71,7 @@ function sessionCookie(token, maxAge) {
 }
 
 // 从 Cookie 解析当前登录用户（未登录返回 null）
-async function currentUser(request, env) {
+export async function currentUser(request, env) {
   const cookie = request.headers.get('Cookie') || '';
   const m = cookie.match(/(?:^|;\s*)session=([0-9a-f]{64})/);
   if (!m) return null;
@@ -192,8 +192,15 @@ async function handleListPosts(url, env, request) {
   const user = await currentUser(request, env);
   const uid = user ? user.id : 0;
 
-  const where = category ? "WHERE p.category = ? AND p.status = 'approved'" : "WHERE p.status = 'approved'";
+  const region = url.searchParams.get('region');
+  if (region && !['domestic', 'overseas'].includes(region)) fail('地区参数不正确');
+
+  let where = category ? "WHERE p.category = ? AND p.status = 'approved'" : "WHERE p.status = 'approved'";
   const args = category ? [category] : [];
+  if (region) {
+    where += " AND json_extract(p.meta, '$.region') = ?";
+    args.push(region);
+  }
 
   const { results } = await env.DB.prepare(
     `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.meta, p.created_at,
