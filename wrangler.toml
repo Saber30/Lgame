@@ -14,9 +14,9 @@ binding = "ASSETS"
 [build]
 command = "npm run build"
 
-# 定时抓取游戏新闻（UTC 1:00 / 13:00 = 北京时间 9:00 / 21:00）
+# 定时抓取游戏新闻（每 2 小时一次）
 [triggers]
-crons = ["0 1 * * *", "0 13 * * *"]
+crons = ["0 */2 * * *"]
 
 # D1 数据库绑定，变量名必须是 DB（代码中通过 env.DB 访问）
 [[d1_databases]]
