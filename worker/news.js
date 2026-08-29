@@ -32,8 +32,8 @@ export async function runNewsCrawler(env) {
         let title = item.title;
         let description = item.description || '';
         if (feed.region === 'overseas') {
-          title = await translateText(env, title);
-          description = await translateText(env, description);
+          title = await translateText(env, title, errors);
+          description = await translateText(env, description, errors);
         }
 
         await env.DB.prepare(
@@ -113,19 +113,27 @@ function buildContent(feed, description, link) {
   return excerpt ? `${excerpt}\n\n${footer}` : footer;
 }
 
-// 把英文文本翻译成简体中文（失败时返回原文兜底）
-async function translateText(env, text) {
+// 把英文文本翻译成简体中文（失败时返回原文兜底，并把错误记录进 errors 供排查）
+async function translateText(env, text, errors) {
   const cleaned = stripHtml(decodeEntities(text || '')).trim();
   if (!cleaned || /[\u4e00-\u9fa5]/.test(cleaned)) return cleaned;
+  if (!env.AI) {
+    pushOnce(errors, 'env.AI 未定义（AI 绑定未生效）');
+    return cleaned;
+  }
   try {
     const res = await env.AI.run('@cf/meta/m2m100-1.2b', {
       text: cleaned.slice(0, 800),
       source_lang: 'english',
       target_lang: 'chinese',
     });
-    return res.translated_text || cleaned;
+    return (res && res.translated_text) || cleaned;
   } catch (e) {
-    console.error('translate failed:', e.message);
+    pushOnce(errors, '翻译失败: ' + (e && e.message ? e.message : String(e)));
     return cleaned;
   }
+}
+
+function pushOnce(arr, msg) {
+  if (Array.isArray(arr) && msg && !arr.includes(msg)) arr.push(msg);
 }
