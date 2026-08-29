@@ -28,13 +28,21 @@ export async function runNewsCrawler(env) {
         if (!item.title || !item.link) continue;
         const exists = await env.DB.prepare('SELECT id FROM posts WHERE link = ?').bind(item.link).first();
         if (exists) continue;
+
+        let title = item.title;
+        let description = item.description || '';
+        if (feed.region === 'overseas') {
+          title = await translateText(env, title);
+          description = await translateText(env, description);
+        }
+
         await env.DB.prepare(
           "INSERT INTO posts (user_id, category, title, content, link, meta, status) VALUES (?, 'news', ?, ?, ?, ?, 'approved')"
         )
           .bind(
             author.id,
-            item.title.slice(0, 100),
-            buildContent(feed, item),
+            title.slice(0, 100),
+            buildContent(feed, description, item.link),
             item.link,
             JSON.stringify({ source: feed.name, region: feed.region })
           )
@@ -99,8 +107,25 @@ function stripHtml(s) {
   return String(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function buildContent(feed, item) {
-  const excerpt = stripHtml(decodeEntities(item.description || '')).slice(0, 300);
-  const footer = `来源：${feed.name} · 原文：${item.link}`;
+function buildContent(feed, description, link) {
+  const excerpt = stripHtml(decodeEntities(description || '')).slice(0, 300);
+  const footer = `来源：${feed.name} · 原文：${link}`;
   return excerpt ? `${excerpt}\n\n${footer}` : footer;
+}
+
+// 把英文文本翻译成简体中文（失败时返回原文兜底）
+async function translateText(env, text) {
+  const cleaned = stripHtml(decodeEntities(text || '')).trim();
+  if (!cleaned || /[\u4e00-\u9fa5]/.test(cleaned)) return cleaned;
+  try {
+    const res = await env.AI.run('@cf/meta/m2m100-1.2b', {
+      text: cleaned.slice(0, 800),
+      source_lang: 'english',
+      target_lang: 'chinese',
+    });
+    return res.translated_text || cleaned;
+  } catch (e) {
+    console.error('translate failed:', e.message);
+    return cleaned;
+  }
 }

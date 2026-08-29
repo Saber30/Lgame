@@ -41,6 +41,11 @@ async function handleCrawl(request, env) {
       headers: { 'Content-Type': 'application/json; charset=utf-8' },
     });
   }
+  // force=1 时先清空所有新闻再重新抓取（用于重置/重新翻译旧数据）
+  const url = new URL(request.url);
+  if (url.searchParams.get('force') === '1') {
+    await env.DB.prepare("DELETE FROM posts WHERE category = 'news'").run();
+  }
   const result = await runNewsCrawler(env);
   return new Response(JSON.stringify({ ok: true, ...result }), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
