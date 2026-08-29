@@ -8,6 +8,7 @@ compatibility_date = "2024-09-01"
 # 前端构建产物目录：由 Workers 静态资源托管
 [assets]
 directory = "dist"
+binding = "ASSETS"
 
 # 每次部署前自动执行前端构建（Cloudflare 会先 npm install 再运行此命令）
 [build]
