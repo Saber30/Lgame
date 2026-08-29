@@ -1,6 +1,6 @@
 // LGame 工作室 · 后端 API
 // 运行在 Cloudflare Workers 上，数据库为 D1 (SQLite)
-// 本文件导出 handleApi(request, env)，由 src/index.js 在 /api/* 路径下调用
+// 本文件导出 handleApi(request, env)，由 worker/index.js 在 /api/* 路径下调用
 
 const ITERATIONS = 100000; // PBKDF2 迭代次数
 const SESSION_MAX_AGE = 30 * 24 * 3600; // 会话有效期 30 天（秒）

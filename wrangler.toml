@@ -1,12 +1,17 @@
 # Cloudflare Workers 部署配置
-# database_id 需要替换为真实值：控制台 -> Storage & Databases -> lgame-db -> 概览页的 Database ID
+# 前端为 Vue 单页应用（Vite 构建，产物输出到 dist/），后端为 Worker + D1
+
 name = "lgame"
-main = "src/index.js"
+main = "worker/index.js"
 compatibility_date = "2024-09-01"
 
-# 静态资源目录：前端所有页面，未匹配到文件的请求才会进入 Worker
+# 前端构建产物目录：由 Workers 静态资源托管
 [assets]
-directory = "public"
+directory = "dist"
+
+# 每次部署前自动执行前端构建（Cloudflare 会先 npm install 再运行此命令）
+[build]
+command = "npm run build"
 
 # D1 数据库绑定，变量名必须是 DB（代码中通过 env.DB 访问）
 [[d1_databases]]
