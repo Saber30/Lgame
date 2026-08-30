@@ -37,10 +37,7 @@ html.dark {
 
 body {
   font-family: var(--font);
-  background:
-    radial-gradient(1200px 500px at 80% -10%, rgba(108, 92, 231, 0.10), transparent 60%),
-    radial-gradient(900px 400px at 10% 0%, rgba(0, 150, 200, 0.05), transparent 50%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
   display: flex;
@@ -48,11 +45,90 @@ body {
   line-height: 1.6;
 }
 
+/* ---- 深色模式：星空背景 ---- */
 html.dark body {
   background:
-    radial-gradient(1200px 500px at 80% -10%, rgba(108, 92, 231, 0.18), transparent 60%),
-    radial-gradient(900px 400px at 10% 0%, rgba(0, 210, 255, 0.08), transparent 50%),
+    radial-gradient(ellipse 120% 60% at 50% -10%, #16264a 0%, transparent 55%),
+    radial-gradient(ellipse 100% 50% at 50% 110%, #0d1830 0%, transparent 50%),
     var(--bg);
+}
+
+/* 星星层 */
+html.dark body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+  box-shadow:
+    5vw 12vh 0 rgba(255, 255, 255, 0.9),
+    12vw 45vh 0 rgba(255, 255, 255, 0.5),
+    18vw 8vh 0 1px rgba(255, 255, 255, 0.7),
+    22vw 65vh 0 rgba(255, 255, 255, 0.6),
+    28vw 30vh 0 1px rgba(255, 255, 255, 0.8),
+    33vw 75vh 0 rgba(255, 255, 255, 0.5),
+    38vw 15vh 0 rgba(255, 255, 255, 0.7),
+    42vw 55vh 0 1px rgba(255, 255, 255, 0.6),
+    47vw 25vh 0 rgba(255, 255, 255, 0.9),
+    52vw 70vh 0 1px rgba(255, 255, 255, 0.5),
+    58vw 10vh 0 rgba(255, 255, 255, 0.6),
+    63vw 40vh 0 1px rgba(255, 255, 255, 0.8),
+    68vw 60vh 0 rgba(255, 255, 255, 0.5),
+    72vw 20vh 0 rgba(255, 255, 255, 0.7),
+    77vw 50vh 0 1px rgba(255, 255, 255, 0.6),
+    82vw 75vh 0 rgba(255, 255, 255, 0.9),
+    87vw 35vh 0 rgba(255, 255, 255, 0.5),
+    92vw 55vh 0 1px rgba(255, 255, 255, 0.7),
+    96vw 15vh 0 rgba(255, 255, 255, 0.6),
+    8vw 80vh 0 1px rgba(255, 255, 255, 0.5),
+    15vw 35vh 0 rgba(255, 255, 255, 0.6),
+    25vw 55vh 0 1px rgba(255, 255, 255, 0.7),
+    35vw 85vh 0 rgba(255, 255, 255, 0.5),
+    45vw 10vh 0 1px rgba(255, 255, 255, 0.8),
+    55vw 45vh 0 rgba(255, 255, 255, 0.6),
+    60vw 80vh 0 1px rgba(255, 255, 255, 0.5),
+    70vw 30vh 0 rgba(255, 255, 255, 0.7),
+    75vw 65vh 0 rgba(255, 255, 255, 0.9),
+    85vw 25vh 0 1px rgba(255, 255, 255, 0.6),
+    90vw 70vh 0 rgba(255, 255, 255, 0.5),
+    50vw 85vh 0 1px rgba(255, 255, 255, 0.7),
+    30vw 90vh 0 rgba(255, 255, 255, 0.5),
+    10vw 60vh 0 1px rgba(255, 255, 255, 0.6),
+    40vw 30vh 0 rgba(255, 255, 255, 0.8),
+    65vw 5vh 0 1px rgba(255, 255, 255, 0.5),
+    80vw 90vh 0 rgba(255, 255, 255, 0.6);
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* 流星 */
+html.dark body::after {
+  content: '';
+  position: fixed;
+  top: -5%;
+  left: 55%;
+  width: 140px;
+  height: 2px;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), transparent);
+  opacity: 0;
+  animation: shooting 8s ease-in infinite 3s;
+}
+
+@keyframes shooting {
+  0% { transform: translate(0, 0) rotate(-35deg); opacity: 0; }
+  4% { opacity: 1; }
+  18% { transform: translate(-65vw, 55vh) rotate(-35deg); opacity: 0; }
+  100% { transform: translate(-65vw, 55vh) rotate(-35deg); opacity: 0; }
 }
 
 a { color: var(--accent-2); }
