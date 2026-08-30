@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { useMessage } from 'naive-ui'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { timeAgo } from '../utils/format'
@@ -11,21 +11,22 @@ const props = defineProps({
 })
 const emit = defineEmits(['added'])
 
+const message = useMessage()
 const auth = useAuthStore()
 const content = ref('')
 const submitting = ref(false)
 
 async function submit() {
   const text = content.value.trim()
-  if (!text) return ElMessage.warning('评论不能为空')
+  if (!text) return message.warning('评论不能为空')
   submitting.value = true
   try {
     await api.post(`/posts/${props.postId}/comments`, { content: text })
     content.value = ''
-    ElMessage.success('评论成功')
+    message.success('评论成功')
     emit('added')
   } catch (e) {
-    ElMessage.error(e.message)
+    message.error(e.message)
   } finally {
     submitting.value = false
   }
@@ -47,12 +48,12 @@ async function submit() {
     </div>
     <div v-else class="empty">还没有评论，来抢沙发</div>
 
-    <form v-if="auth.isLoggedIn" class="comment-form" @submit.prevent="submit">
-      <el-input v-model="content" type="textarea" :rows="3" maxlength="2000" placeholder="说点什么…" />
-      <el-button type="primary" native-type="submit" :loading="submitting" style="margin-top: 10px">
+    <div v-if="auth.isLoggedIn" class="comment-form">
+      <n-input v-model:value="content" type="textarea" :rows="3" maxlength="2000" placeholder="说点什么…" />
+      <n-button type="primary" :loading="submitting" style="margin-top: 10px" @click="submit">
         发表评论
-      </el-button>
-    </form>
+      </n-button>
+    </div>
     <div v-else class="login-tip">👉 <router-link to="/login">登录</router-link> 后参与评论</div>
   </section>
 </template>

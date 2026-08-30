@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { useMessage, useDialog } from 'naive-ui'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { categoryLabel, fmtTime, parseDailyMeta } from '../utils/format'
@@ -11,6 +11,8 @@ import CommentSection from '../components/CommentSection.vue'
 const props = defineProps({ id: { type: [String, Number], required: true } })
 const router = useRouter()
 const auth = useAuthStore()
+const message = useMessage()
+const dialog = useDialog()
 
 const data = ref(null)
 const loading = ref(true)
@@ -44,13 +46,13 @@ async function load() {
 }
 
 async function toggleLike() {
-  if (!auth.isLoggedIn) return ElMessage.warning('请先登录')
+  if (!auth.isLoggedIn) return message.warning('请先登录')
   try {
     const res = await api.post(`/posts/${post.value.id}/like`)
     liked.value = res.liked
     likeCount.value = res.like_count
   } catch (e) {
-    ElMessage.error(e.message)
+    message.error(e.message)
   }
 }
 
@@ -78,11 +80,11 @@ async function submitEdit() {
         ? { title: editForm.title, done: editForm.done, plan: editForm.plan, issues: editForm.issues }
         : { title: editForm.title, content: editForm.content, link: editForm.link || undefined }
     await api.patch(`/posts/${post.value.id}`, body)
-    ElMessage.success('已保存')
+    message.success('已保存')
     editVisible.value = false
     await load()
   } catch (e) {
-    ElMessage.error(e.message)
+    message.error(e.message)
   } finally {
     editSubmitting.value = false
   }
@@ -92,23 +94,22 @@ async function onCommentAdded() {
   await load()
 }
 
-async function onDelete() {
-  try {
-    await ElMessageBox.confirm('确定删除这篇帖子吗？删除后无法恢复。', '提示', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
-  try {
-    await api.del('/posts/' + post.value.id)
-    ElMessage.success('已删除')
-    router.push(categoryPath(post.value.category))
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
+function onDelete() {
+  dialog.warning({
+    title: '提示',
+    content: '确定删除这篇帖子吗？删除后无法恢复。',
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await api.del('/posts/' + post.value.id)
+        message.success('已删除')
+        router.push(categoryPath(post.value.category))
+      } catch (e) {
+        message.error(e.message)
+      }
+    },
+  })
 }
 
 onMounted(load)
@@ -144,53 +145,55 @@ onMounted(load)
           target="_blank"
           rel="noopener"
         >
-          <el-button>查看原文 ↗</el-button>
+          <n-button>查看原文 ↗</n-button>
         </a>
       </template>
 
       <div class="post-actions">
-        <el-button :type="liked ? 'primary' : 'default'" size="small" @click="toggleLike">
+        <n-button :type="liked ? 'primary' : 'default'" size="small" @click="toggleLike">
           {{ liked ? '已赞' : '点赞' }} <span v-if="likeCount">{{ likeCount }}</span>
-        </el-button>
-        <el-button v-if="data.canEdit" size="small" @click="openEdit">编辑</el-button>
-        <el-button v-if="data.canDelete" size="small" type="danger" plain @click="onDelete">删除</el-button>
+        </n-button>
+        <n-button v-if="data.canEdit" size="small" @click="openEdit">编辑</n-button>
+        <n-button v-if="data.canDelete" size="small" type="error" secondary @click="onDelete">删除</n-button>
       </div>
     </article>
 
     <CommentSection :post-id="Number(post.id)" :comments="data.comments" @added="onCommentAdded" />
 
-    <el-dialog v-model="editVisible" title="编辑帖子" width="600px">
-      <el-form label-position="top">
+    <n-modal v-model:show="editVisible" preset="card" title="编辑帖子" style="width: 600px">
+      <n-form label-placement="top">
         <template v-if="post.category === 'daily'">
-          <el-form-item label="标题">
-            <el-input v-model="editForm.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
-          </el-form-item>
-          <el-form-item label="✅ 今天完成了什么">
-            <el-input v-model="editForm.done" type="textarea" :rows="4" />
-          </el-form-item>
-          <el-form-item label="📋 明天计划做什么">
-            <el-input v-model="editForm.plan" type="textarea" :rows="3" />
-          </el-form-item>
-          <el-form-item label="⚠️ 遇到的问题">
-            <el-input v-model="editForm.issues" type="textarea" :rows="3" />
-          </el-form-item>
+          <n-form-item label="标题">
+            <n-input v-model:value="editForm.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
+          </n-form-item>
+          <n-form-item label="✅ 今天完成了什么">
+            <n-input v-model:value="editForm.done" type="textarea" :rows="4" />
+          </n-form-item>
+          <n-form-item label="📋 明天计划做什么">
+            <n-input v-model:value="editForm.plan" type="textarea" :rows="3" />
+          </n-form-item>
+          <n-form-item label="⚠️ 遇到的问题">
+            <n-input v-model:value="editForm.issues" type="textarea" :rows="3" />
+          </n-form-item>
         </template>
         <template v-else>
-          <el-form-item label="标题">
-            <el-input v-model="editForm.title" maxlength="100" />
-          </el-form-item>
-          <el-form-item v-if="post.category === 'news'" label="原文链接（可选）">
-            <el-input v-model="editForm.link" placeholder="https://…" />
-          </el-form-item>
-          <el-form-item label="内容（支持 Markdown）">
-            <el-input v-model="editForm.content" type="textarea" :rows="8" />
-          </el-form-item>
+          <n-form-item label="标题">
+            <n-input v-model:value="editForm.title" maxlength="100" />
+          </n-form-item>
+          <n-form-item v-if="post.category === 'news'" label="原文链接（可选）">
+            <n-input v-model:value="editForm.link" placeholder="https://…" />
+          </n-form-item>
+          <n-form-item label="内容（支持 Markdown）">
+            <n-input v-model:value="editForm.content" type="textarea" :rows="8" />
+          </n-form-item>
         </template>
-      </el-form>
+      </n-form>
       <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" :loading="editSubmitting" @click="submitEdit">保存</el-button>
+        <div style="display: flex; justify-content: flex-end; gap: 10px">
+          <n-button @click="editVisible = false">取消</n-button>
+          <n-button type="primary" :loading="editSubmitting" @click="submitEdit">保存</n-button>
+        </div>
       </template>
-    </el-dialog>
+    </n-modal>
   </template>
 </template>

@@ -32,10 +32,10 @@ onMounted(async () => {
     <p class="hero-sub">独立游戏工作室的小站 -- 分享新闻、交流心得、记录学习与每一天</p>
     <div class="btn-row">
       <router-link to="/news">
-        <el-button type="primary" size="large">看看最新消息</el-button>
+        <n-button type="primary" size="large">看看最新消息</n-button>
       </router-link>
       <router-link to="/daily">
-        <el-button size="large">今日日报</el-button>
+        <n-button size="large">今日日报</n-button>
       </router-link>
     </div>
   </section>

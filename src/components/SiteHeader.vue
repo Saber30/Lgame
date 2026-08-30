@@ -34,7 +34,7 @@ async function onLogout() {
           <template v-else>
             <router-link to="/login">登录</router-link>
             <router-link to="/register">
-              <el-button size="small" type="primary">注册</el-button>
+              <n-button size="small" type="primary">注册</n-button>
             </router-link>
           </template>
         </div>

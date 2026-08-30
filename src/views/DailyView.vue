@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { useMessage } from 'naive-ui'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import PostCard from '../components/PostCard.vue'
@@ -9,6 +9,7 @@ import PaginationBar from '../components/PaginationBar.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
+const message = useMessage()
 const posts = ref([])
 const page = ref(1)
 const total = ref(0)
@@ -35,7 +36,7 @@ async function load() {
 
 async function submit() {
   if (!form.done.trim() && !form.plan.trim() && !form.issues.trim()) {
-    return ElMessage.warning('日报内容不能为空')
+    return message.warning('日报内容不能为空')
   }
   submitting.value = true
   try {
@@ -46,14 +47,14 @@ async function submit() {
       plan: form.plan,
       issues: form.issues,
     })
-    ElMessage.success('日报已提交 ✅')
+    message.success('日报已提交 ✅')
     form.title = ''
     form.done = ''
     form.plan = ''
     form.issues = ''
     router.push('/post/' + data.id)
   } catch (e) {
-    ElMessage.error(e.message)
+    message.error(e.message)
   } finally {
     submitting.value = false
   }
@@ -76,21 +77,21 @@ onMounted(load)
 
   <section v-if="auth.isLoggedIn" class="compose-card">
     <h2>📅 提交今日日报</h2>
-    <el-form label-position="top" @submit.prevent="submit">
-      <el-form-item label="标题">
-        <el-input v-model="form.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
-      </el-form-item>
-      <el-form-item label="✅ 今天完成了什么">
-        <el-input v-model="form.done" type="textarea" :rows="4" maxlength="10000" placeholder="今天做的工作、完成的任务、推进到哪一步了…" />
-      </el-form-item>
-      <el-form-item label="📋 明天计划做什么">
-        <el-input v-model="form.plan" type="textarea" :rows="3" maxlength="10000" placeholder="明天的计划与安排…" />
-      </el-form-item>
-      <el-form-item label="⚠️ 遇到的问题（可选）">
-        <el-input v-model="form.issues" type="textarea" :rows="3" maxlength="10000" placeholder="遇到的困难、需要谁协助、卡住的点…" />
-      </el-form-item>
-      <el-button type="primary" native-type="submit" :loading="submitting">提交日报</el-button>
-    </el-form>
+    <n-form label-placement="top">
+      <n-form-item label="标题">
+        <n-input v-model:value="form.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
+      </n-form-item>
+      <n-form-item label="✅ 今天完成了什么">
+        <n-input v-model:value="form.done" type="textarea" :rows="4" maxlength="10000" placeholder="今天做的工作、完成的任务、推进到哪一步了…" />
+      </n-form-item>
+      <n-form-item label="📋 明天计划做什么">
+        <n-input v-model:value="form.plan" type="textarea" :rows="3" maxlength="10000" placeholder="明天的计划与安排…" />
+      </n-form-item>
+      <n-form-item label="⚠️ 遇到的问题（可选）">
+        <n-input v-model:value="form.issues" type="textarea" :rows="3" maxlength="10000" placeholder="遇到的困难、需要谁协助、卡住的点…" />
+      </n-form-item>
+      <n-button type="primary" :loading="submitting" @click="submit">提交日报</n-button>
+    </n-form>
   </section>
   <div v-else class="login-tip">👉 <router-link to="/login">登录</router-link> 后即可提交日报</div>
 

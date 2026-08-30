@@ -31,30 +31,7 @@ html.dark {
   color-scheme: dark;
 }
 
-/* ---- Element Plus 主题贴合 ---- */
-:root {
-  --el-color-primary: #6c5ce7;
-  --el-color-primary-light-3: #8f7bff;
-  --el-color-primary-light-5: #a99cf5;
-  --el-color-primary-light-7: #c6bdfa;
-  --el-color-primary-light-8: #d8d2fc;
-  --el-color-primary-light-9: #ece9fe;
-  --el-color-primary-dark-2: #5a4bd6;
-  --el-border-radius-base: 10px;
-}
-
-html.dark {
-  --el-bg-color: #141c2e;
-  --el-bg-color-overlay: #1a2438;
-  --el-bg-color-page: #0a0e17;
-  --el-fill-color-blank: #141c2e;
-  --el-border-color: #263048;
-  --el-border-color-light: #263048;
-  --el-border-color-lighter: #263048;
-  --el-text-color-primary: #dde5f2;
-  --el-text-color-regular: #aab3c9;
-  --el-text-color-secondary: #8a94ab;
-}
+/* ---- 主题变量由 Naive UI 的 darkTheme 接管，这里只保留自定义布局配色 ---- */
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 

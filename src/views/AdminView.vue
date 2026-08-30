@@ -1,11 +1,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { useMessage, useDialog } from 'naive-ui'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { categoryLabel, fmtDate, timeAgo } from '../utils/format'
 
 const auth = useAuthStore()
+const message = useMessage()
+const dialog = useDialog()
 const stats = ref(null)
 const users = ref([])
 const posts = ref([])
@@ -23,86 +25,86 @@ async function load() {
     users.value = ud.users
     posts.value = pd.posts
   } catch (e) {
-    ElMessage.error(e.message)
+    message.error(e.message)
   } finally {
     loading.value = false
   }
 }
 
-async function toggleRole(u) {
+function toggleRole(u) {
   const toAdmin = u.role !== 'admin'
-  try {
-    await ElMessageBox.confirm(
-      toAdmin ? '确定将该成员设为管理员吗？' : '确定将该管理员降为普通成员吗？',
-      '提示',
-      { type: 'warning' }
-    )
-  } catch {
-    return
-  }
-  try {
-    await api.patch('/users/' + u.id, { role: toAdmin ? 'admin' : 'member' })
-    ElMessage.success('已更新')
-    load()
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
+  dialog.warning({
+    title: '提示',
+    content: toAdmin ? '确定将该成员设为管理员吗？' : '确定将该管理员降为普通成员吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await api.patch('/users/' + u.id, { role: toAdmin ? 'admin' : 'member' })
+        message.success('已更新')
+        load()
+      } catch (e) {
+        message.error(e.message)
+      }
+    },
+  })
 }
 
-async function deleteUser(u) {
-  try {
-    await ElMessageBox.confirm('确定删除该成员？TA 发布的所有帖子和评论也会一起删除。', '警告', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
-  try {
-    await api.del('/users/' + u.id)
-    ElMessage.success('已删除')
-    load()
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
+function resetPassword(u) {
+  dialog.warning({
+    title: '提示',
+    content: `确定重置「${u.username}」的密码吗？重置后原密码立即失效。`,
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        const data = await api.post(`/users/${u.id}/reset-password`)
+        dialog.info({
+          title: '密码已重置',
+          content: `新密码：${data.password}`,
+          positiveText: '知道了',
+        })
+      } catch (e) {
+        message.error(e.message)
+      }
+    },
+  })
 }
 
-async function deletePost(p) {
-  try {
-    await ElMessageBox.confirm('确定删除这篇帖子？', '提示', {
-      type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-    })
-  } catch {
-    return
-  }
-  try {
-    await api.del('/posts/' + p.id)
-    ElMessage.success('已删除')
-    load()
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
+function deleteUser(u) {
+  dialog.warning({
+    title: '警告',
+    content: '确定删除该成员？TA 发布的所有帖子和评论也会一起删除。',
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await api.del('/users/' + u.id)
+        message.success('已删除')
+        load()
+      } catch (e) {
+        message.error(e.message)
+      }
+    },
+  })
 }
 
-async function resetPassword(u) {
-  try {
-    await ElMessageBox.confirm(`确定重置「${u.username}」的密码吗？重置后原密码立即失效。`, '提示', {
-      type: 'warning',
-    })
-  } catch {
-    return
-  }
-  try {
-    const data = await api.post(`/users/${u.id}/reset-password`)
-    await ElMessageBox.alert(`新密码：${data.password}`, '密码已重置', {
-      confirmButtonText: '知道了',
-    })
-  } catch (e) {
-    ElMessage.error(e.message)
-  }
+function deletePost(p) {
+  dialog.warning({
+    title: '提示',
+    content: '确定删除这篇帖子？',
+    positiveText: '删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await api.del('/posts/' + p.id)
+        message.success('已删除')
+        load()
+      } catch (e) {
+        message.error(e.message)
+      }
+    },
+  })
 }
 
 onMounted(load)
@@ -126,33 +128,44 @@ onMounted(load)
 
     <section class="admin-section">
       <h2>👥 成员管理</h2>
-      <el-table :data="users" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column label="用户名" min-width="140">
-          <template #default="{ row }">
-            {{ row.username }}
-            <span v-if="row.role === 'admin'" class="badge badge-admin">管理员</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="email" label="邮箱" min-width="180" class-name="text-dim" />
-        <el-table-column prop="post_count" label="帖子" width="70" />
-        <el-table-column prop="comment_count" label="评论" width="70" />
-        <el-table-column label="注册时间" width="120">
-          <template #default="{ row }">{{ fmtDate(row.created_at) }}</template>
-        </el-table-column>
-        <el-table-column label="操作" width="330">
-          <template #default="{ row }">
-            <span v-if="row.id === auth.user?.id" class="text-dim">当前账号</span>
-            <template v-else>
-              <el-button size="small" @click="toggleRole(row)">
-                {{ row.role === 'admin' ? '设为成员' : '设为管理员' }}
-              </el-button>
-              <el-button size="small" @click="resetPassword(row)">重置密码</el-button>
-              <el-button size="small" type="danger" plain @click="deleteUser(row)">删除</el-button>
-            </template>
-          </template>
-        </el-table-column>
-      </el-table>
+      <div class="table-wrap">
+        <n-table :single-line="false" :bordered="false">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>用户名</th>
+              <th>邮箱</th>
+              <th>帖子</th>
+              <th>评论</th>
+              <th>注册时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in users" :key="u.id">
+              <td>{{ u.id }}</td>
+              <td>
+                {{ u.username }}
+                <span v-if="u.role === 'admin'" class="badge badge-admin">管理员</span>
+              </td>
+              <td class="text-dim">{{ u.email }}</td>
+              <td>{{ u.post_count }}</td>
+              <td>{{ u.comment_count }}</td>
+              <td class="text-dim">{{ fmtDate(u.created_at) }}</td>
+              <td>
+                <span v-if="u.id === auth.user?.id" class="text-dim">当前账号</span>
+                <n-space v-else size="small">
+                  <n-button size="small" @click="toggleRole(u)">
+                    {{ u.role === 'admin' ? '设为成员' : '设为管理员' }}
+                  </n-button>
+                  <n-button size="small" @click="resetPassword(u)">重置密码</n-button>
+                  <n-button size="small" type="error" secondary @click="deleteUser(u)">删除</n-button>
+                </n-space>
+              </td>
+            </tr>
+          </tbody>
+        </n-table>
+      </div>
     </section>
 
     <section class="admin-section">
@@ -162,7 +175,7 @@ onMounted(load)
           <span class="badge" :class="'badge-' + p.category">{{ categoryLabel(p.category) }}</span>
           <router-link :to="'/post/' + p.id" class="admin-post-title">{{ p.title }}</router-link>
           <span class="text-dim">{{ p.author_name }} · {{ timeAgo(p.created_at) }}</span>
-          <el-button size="small" type="danger" plain @click="deletePost(p)">删除</el-button>
+          <n-button size="small" type="error" secondary @click="deletePost(p)">删除</n-button>
         </div>
       </div>
       <div v-else class="empty">还没有帖子</div>

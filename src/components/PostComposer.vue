@@ -1,6 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { useMessage } from 'naive-ui'
 import { api } from '../api'
 
 const props = defineProps({
@@ -8,6 +8,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['created'])
 
+const message = useMessage()
 const form = reactive({ title: '', content: '', link: '' })
 const submitting = ref(false)
 
@@ -29,8 +30,8 @@ const PLACEHOLDER = {
 }
 
 async function submit() {
-  if (!form.title.trim()) return ElMessage.warning('请填写标题')
-  if (!form.content.trim()) return ElMessage.warning('请填写内容')
+  if (!form.title.trim()) return message.warning('请填写标题')
+  if (!form.content.trim()) return message.warning('请填写内容')
   submitting.value = true
   try {
     const data = await api.post('/posts', {
@@ -39,13 +40,13 @@ async function submit() {
       content: form.content,
       link: form.link || undefined,
     })
-    ElMessage.success('发布成功')
+    message.success('发布成功')
     emit('created', data.id)
     form.title = ''
     form.content = ''
     form.link = ''
   } catch (e) {
-    ElMessage.error(e.message)
+    message.error(e.message)
   } finally {
     submitting.value = false
   }
@@ -55,24 +56,24 @@ async function submit() {
 <template>
   <section class="compose-card">
     <h2>{{ isNews ? '🗞️ 分享一条新闻' : '✍️ 发布新帖' }}</h2>
-    <el-form label-position="top" @submit.prevent="submit">
-      <el-form-item label="标题">
-        <el-input v-model="form.title" maxlength="100" :placeholder="PLACEHOLDER[category].title" />
-      </el-form-item>
-      <el-form-item v-if="isNews" label="原文链接（建议填写）">
-        <el-input v-model="form.link" placeholder="https://…" />
-      </el-form-item>
-      <el-form-item label="内容">
-        <el-input
-          v-model="form.content"
+    <n-form label-placement="top">
+      <n-form-item label="标题">
+        <n-input v-model:value="form.title" maxlength="100" :placeholder="PLACEHOLDER[category].title" />
+      </n-form-item>
+      <n-form-item v-if="isNews" label="原文链接（建议填写）">
+        <n-input v-model:value="form.link" placeholder="https://…" />
+      </n-form-item>
+      <n-form-item label="内容">
+        <n-input
+          v-model:value="form.content"
           type="textarea"
           :rows="5"
           maxlength="10000"
-          show-word-limit
+          show-count
           :placeholder="PLACEHOLDER[category].content"
         />
-      </el-form-item>
-      <el-button type="primary" native-type="submit" :loading="submitting">发布</el-button>
-    </el-form>
+      </n-form-item>
+      <n-button type="primary" :loading="submitting" @click="submit">发布</n-button>
+    </n-form>
   </section>
 </template>
