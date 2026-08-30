@@ -326,3 +326,73 @@ html.dark .post-card:hover { border-color: #3a4767; }
   .post-detail { padding: 20px; }
   .post-detail h1 { font-size: 21px; }
 }
+
+/* ============ 动效装饰 ============ */
+
+/* 路由切换过渡 */
+.page-enter-active,
+.page-leave-active { transition: opacity 0.22s ease, transform 0.22s ease; }
+.page-enter-from { opacity: 0; transform: translateY(14px); }
+.page-leave-to { opacity: 0; transform: translateY(-10px); }
+
+/* 渐变色流动（logo / hero 标题） */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.logo span,
+.hero-title span {
+  background-size: 200% auto;
+  animation: gradientShift 4s ease-in-out infinite;
+}
+
+/* 图标浮动 */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.feature-icon { animation: float 3s ease-in-out infinite; }
+.feature-card:nth-child(2) .feature-icon { animation-delay: 0.4s; }
+.feature-card:nth-child(3) .feature-icon { animation-delay: 0.8s; }
+.feature-card:nth-child(4) .feature-icon { animation-delay: 1.2s; }
+
+/* 列表卡片入场（依次淡入上移） */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.post-list .post-card { animation: fadeInUp 0.45s ease backwards; }
+.post-list .post-card:nth-child(2) { animation-delay: 0.05s; }
+.post-list .post-card:nth-child(3) { animation-delay: 0.1s; }
+.post-list .post-card:nth-child(4) { animation-delay: 0.15s; }
+.post-list .post-card:nth-child(5) { animation-delay: 0.2s; }
+.post-list .post-card:nth-child(6) { animation-delay: 0.25s; }
+.post-list .post-card:nth-child(7) { animation-delay: 0.3s; }
+.post-list .post-card:nth-child(8) { animation-delay: 0.35s; }
+.post-list .post-card:nth-child(9) { animation-delay: 0.4s; }
+.post-list .post-card:nth-child(10) { animation-delay: 0.45s; }
+
+/* 卡片 hover 上浮 + 阴影 */
+.post-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(108, 92, 231, 0.18);
+}
+html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
+
+/* 加载 spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 10px;
+  vertical-align: -3px;
+}
