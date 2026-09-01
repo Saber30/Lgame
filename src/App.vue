@@ -14,9 +14,9 @@ const naiveTheme = computed(() => (theme.theme === 'dark' ? darkTheme : null))
       <n-dialog-provider>
         <SiteHeader />
         <main class="container">
-          <router-view v-slot="{ Component }">
+          <router-view v-slot="{ Component, route }">
             <transition name="page" mode="out-in">
-              <component :is="Component" />
+              <component :is="Component" :key="route.fullPath" />
             </transition>
           </router-view>
         </main>
