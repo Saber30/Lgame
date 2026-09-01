@@ -15,9 +15,7 @@ const naiveTheme = computed(() => (theme.theme === 'dark' ? darkTheme : null))
         <SiteHeader />
         <main class="container">
           <router-view v-slot="{ Component, route }">
-            <transition name="page" mode="out-in">
-              <component :is="Component" :key="route.fullPath" />
-            </transition>
+            <component :is="Component" :key="route.fullPath" />
           </router-view>
         </main>
         <footer class="site-footer">LGame 工作室 · lgame.men · 用热爱做游戏</footer>
