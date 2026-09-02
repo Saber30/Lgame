@@ -29,6 +29,7 @@ async function onLogout() {
           <template v-if="auth.isLoggedIn">
             <span class="nav-username">👋 {{ auth.user.username }}</span>
             <router-link v-if="auth.isAdmin" to="/admin">管理</router-link>
+            <router-link v-if="auth.isAdmin" to="/report">周报</router-link>
             <a href="#" @click.prevent="onLogout">退出</a>
           </template>
           <template v-else>

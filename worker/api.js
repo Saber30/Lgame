@@ -485,6 +485,30 @@ async function handleDailyCheckin(request, env) {
   return json({ done: doneQuery.results, missing: missingQuery.results });
 }
 
+async function handleReports(request, env) {
+  await requireAdmin(request, env);
+  const url = new URL(request.url);
+  const days = Math.min(90, Math.max(1, parseInt(url.searchParams.get('days') || '7', 10) || 7));
+
+  const { results } = await env.DB.prepare(
+    `SELECT p.id, p.user_id, p.title, p.meta, p.created_at, u.username
+       FROM posts p JOIN users u ON u.id = p.user_id
+      WHERE p.category = 'daily'
+        AND date(p.created_at, '+8 hours') >= date('now', '+8 hours', '-' || ? || ' days')
+      ORDER BY u.id ASC, p.created_at ASC`
+  ).bind(days).all();
+
+  // 按成员分组
+  const grouped = new Map();
+  for (const row of results) {
+    if (!grouped.has(row.user_id)) {
+      grouped.set(row.user_id, { user_id: row.user_id, username: row.username, posts: [] });
+    }
+    grouped.get(row.user_id).posts.push(row);
+  }
+  return json({ days, reports: [...grouped.values()] });
+}
+
 async function handleStats(request, env) {
   await requireAdmin(request, env);
   const { c: users } = await env.DB.prepare('SELECT COUNT(*) AS c FROM users').first();
@@ -519,6 +543,7 @@ export async function handleApi(request, env) {
       }
       if (seg[0] === 'stats' && method === 'GET') return await handleStats(request, env);
       if (seg[0] === 'daily-checkin' && method === 'GET') return await handleDailyCheckin(request, env);
+      if (seg[0] === 'reports' && method === 'GET') return await handleReports(request, env);
       if (seg[0] === 'posts') {
         if (method === 'GET') return await handleListPosts(url, env, request);
         if (method === 'POST') return await handleCreatePost(request, env);

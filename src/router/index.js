@@ -11,6 +11,7 @@ const routes = [
   { path: '/daily', name: 'daily', component: () => import('../views/DailyView.vue') },
   { path: '/post/:id', name: 'post', component: () => import('../views/PostView.vue'), props: true },
   { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { requiresAdmin: true } },
+  { path: '/report', name: 'report', component: () => import('../views/ReportView.vue'), meta: { requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
