@@ -394,7 +394,14 @@ async function handleListUsers(request, env) {
   const { results } = await env.DB.prepare(
     `SELECT u.id, u.username, u.email, u.role, u.created_at,
             (SELECT COUNT(*) FROM posts WHERE user_id = u.id) AS post_count,
-            (SELECT COUNT(*) FROM comments WHERE user_id = u.id) AS comment_count
+            (SELECT COUNT(*) FROM comments WHERE user_id = u.id) AS comment_count,
+            (SELECT COUNT(*) FROM likes WHERE user_id = u.id) AS like_given,
+            (SELECT COUNT(*) FROM likes l JOIN posts p ON p.id = l.post_id WHERE p.user_id = u.id) AS like_received,
+            (SELECT MAX(created_at) FROM (
+              SELECT created_at FROM posts WHERE user_id = u.id
+              UNION ALL
+              SELECT created_at FROM comments WHERE user_id = u.id
+            )) AS last_active
        FROM users u
       ORDER BY u.id ASC`
   ).all();
@@ -453,6 +460,31 @@ async function handleResetPassword(request, env, id) {
   return json({ ok: true, password: newPassword, message: '密码已重置，请把新密码转告该成员' });
 }
 
+async function handleDailyCheckin(request, env) {
+  await requireUser(request, env);
+  const doneQuery = await env.DB.prepare(
+    `SELECT u.id, u.username
+       FROM users u
+      WHERE EXISTS (
+        SELECT 1 FROM posts p
+         WHERE p.user_id = u.id AND p.category = 'daily'
+           AND date(p.created_at, '+8 hours') = date('now', '+8 hours')
+      )
+      ORDER BY u.id ASC`
+  ).all();
+  const missingQuery = await env.DB.prepare(
+    `SELECT u.id, u.username
+       FROM users u
+      WHERE NOT EXISTS (
+        SELECT 1 FROM posts p
+         WHERE p.user_id = u.id AND p.category = 'daily'
+           AND date(p.created_at, '+8 hours') = date('now', '+8 hours')
+      )
+      ORDER BY u.id ASC`
+  ).all();
+  return json({ done: doneQuery.results, missing: missingQuery.results });
+}
+
 async function handleStats(request, env) {
   await requireAdmin(request, env);
   const { c: users } = await env.DB.prepare('SELECT COUNT(*) AS c FROM users').first();
@@ -486,6 +518,7 @@ export async function handleApi(request, env) {
         return json({ user: user ? publicUser(user) : null });
       }
       if (seg[0] === 'stats' && method === 'GET') return await handleStats(request, env);
+      if (seg[0] === 'daily-checkin' && method === 'GET') return await handleDailyCheckin(request, env);
       if (seg[0] === 'posts') {
         if (method === 'GET') return await handleListPosts(url, env, request);
         if (method === 'POST') return await handleCreatePost(request, env);

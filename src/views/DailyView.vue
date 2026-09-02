@@ -16,6 +16,7 @@ const total = ref(0)
 const loading = ref(true)
 const error = ref('')
 const PAGE_SIZE = 10
+const checkin = ref(null)
 
 const form = reactive({ title: '', done: '', plan: '', issues: '' })
 const submitting = ref(false)
@@ -31,6 +32,15 @@ async function load() {
     error.value = e.message
   } finally {
     loading.value = false
+  }
+}
+
+async function loadCheckin() {
+  if (!auth.isLoggedIn) return
+  try {
+    checkin.value = await api.get('/daily-checkin')
+  } catch {
+    checkin.value = null
   }
 }
 
@@ -66,7 +76,10 @@ function onPageChange(p) {
   window.scrollTo(0, 0)
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadCheckin()
+})
 </script>
 
 <template>
@@ -74,6 +87,22 @@ onMounted(load)
     <h1>📝 工作日报</h1>
     <p>今天做了什么、明天做什么、卡在了哪里</p>
   </div>
+
+  <section v-if="checkin" class="checkin-card">
+    <h2>📋 今日日报提交情况</h2>
+    <div class="checkin-row">
+      <span class="checkin-tag checkin-done">✅ 已交 {{ checkin.done.length }} 人</span>
+      <span v-if="checkin.done.length" class="checkin-names">{{ checkin.done.map((d) => d.username).join('、') }}</span>
+      <span v-else class="text-dim">暂无</span>
+    </div>
+    <div class="checkin-row">
+      <span class="checkin-tag checkin-missing">⏳ 未交 {{ checkin.missing.length }} 人</span>
+      <span v-if="checkin.missing.length" class="checkin-names checkin-missing-names">
+        {{ checkin.missing.map((m) => m.username).join('、') }}
+      </span>
+      <span v-else class="text-dim">全员已交 🎉</span>
+    </div>
+  </section>
 
   <section v-if="auth.isLoggedIn" class="compose-card">
     <h2>📅 提交今日日报</h2>

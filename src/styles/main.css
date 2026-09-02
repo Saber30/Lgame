@@ -474,3 +474,50 @@ html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
   margin-right: 10px;
   vertical-align: -3px;
 }
+
+/* ---- 日报提交统计 ---- */
+.checkin-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+}
+.checkin-card h2 { font-size: 16px; margin-bottom: 12px; }
+.checkin-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.checkin-tag { font-size: 13px; font-weight: 600; white-space: nowrap; }
+.checkin-done { color: var(--ok); }
+.checkin-missing { color: var(--danger); }
+.checkin-names { color: var(--text-dim); font-size: 13px; }
+.checkin-missing-names { color: var(--danger); }
+
+/* ---- 活跃度排行 ---- */
+.rank-list { display: flex; flex-direction: column; gap: 8px; }
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  flex-wrap: wrap;
+}
+.rank-no {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rank-top-1 { background: rgba(255, 195, 66, 0.2); color: #f5a623; }
+.rank-top-2 { background: rgba(170, 180, 200, 0.2); color: #aab4c8; }
+.rank-top-3 { background: rgba(205, 138, 94, 0.2); color: #cd8a5e; }
+.rank-name { font-weight: 600; min-width: 80px; }
+.rank-score { margin-left: auto; color: var(--accent-2); font-weight: 700; font-size: 14px; }

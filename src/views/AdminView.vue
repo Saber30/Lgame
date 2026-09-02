@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
@@ -107,6 +107,12 @@ function deletePost(p) {
   })
 }
 
+const activityRank = computed(() =>
+  [...users.value]
+    .map((u) => ({ ...u, score: u.post_count * 3 + u.comment_count * 2 + (u.like_received || 0) }))
+    .sort((a, b) => b.score - a.score)
+)
+
 onMounted(load)
 </script>
 
@@ -127,6 +133,19 @@ onMounted(load)
     </div>
 
     <section class="admin-section">
+      <h2>🏆 活跃度排行</h2>
+      <div class="rank-list">
+        <div v-for="(u, i) in activityRank" :key="u.id" class="rank-item">
+          <span class="rank-no" :class="'rank-top-' + (i + 1)">{{ i + 1 }}</span>
+          <span class="rank-name">{{ u.username }}</span>
+          <span class="text-dim">帖子 {{ u.post_count }} · 评论 {{ u.comment_count }} · 获赞 {{ u.like_received || 0 }}</span>
+          <span class="rank-score">{{ u.score }} 分</span>
+        </div>
+        <div v-if="!activityRank.length" class="empty">暂无成员</div>
+      </div>
+    </section>
+
+    <section class="admin-section">
       <h2>👥 成员管理</h2>
       <div class="table-wrap">
         <n-table :single-line="false" :bordered="false">
@@ -137,6 +156,8 @@ onMounted(load)
               <th>邮箱</th>
               <th>帖子</th>
               <th>评论</th>
+              <th>获赞</th>
+              <th>最后活跃</th>
               <th>注册时间</th>
               <th>操作</th>
             </tr>
@@ -151,6 +172,8 @@ onMounted(load)
               <td class="text-dim">{{ u.email }}</td>
               <td>{{ u.post_count }}</td>
               <td>{{ u.comment_count }}</td>
+              <td>{{ u.like_received || 0 }}</td>
+              <td class="text-dim">{{ u.last_active ? timeAgo(u.last_active) : '从未' }}</td>
               <td class="text-dim">{{ fmtDate(u.created_at) }}</td>
               <td>
                 <span v-if="u.id === auth.user?.id" class="text-dim">当前账号</span>
