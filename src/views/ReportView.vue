@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { api } from '../api'
 import { fmtDate, parseDailyMeta } from '../utils/format'
+import { renderMarkdown } from '../utils/markdown'
 
 const message = useMessage()
 const days = ref(7)
@@ -78,17 +79,20 @@ onMounted(load)
       <h2 class="report-name">{{ r.username }} <span class="text-dim">（{{ r.posts.length }} 篇）</span></h2>
       <div v-for="p in r.posts" :key="p.id" class="report-post">
         <div class="report-post-head"><strong>{{ fmtDate(p.created_at) }}</strong></div>
-        <div v-if="parseDailyMeta(p.meta).done" class="report-block">
-          <span class="report-label">✅ 完成</span>
-          <span class="report-text">{{ parseDailyMeta(p.meta).done }}</span>
+        <div class="daily-block">
+          <h4>✅ 完成</h4>
+          <div v-if="parseDailyMeta(p.meta).done" class="post-content" v-html="renderMarkdown(parseDailyMeta(p.meta).done)"></div>
+          <p v-else class="text-dim">（空）</p>
         </div>
-        <div v-if="parseDailyMeta(p.meta).plan" class="report-block">
-          <span class="report-label">📋 计划</span>
-          <span class="report-text">{{ parseDailyMeta(p.meta).plan }}</span>
+        <div class="daily-block">
+          <h4>📋 计划</h4>
+          <div v-if="parseDailyMeta(p.meta).plan" class="post-content" v-html="renderMarkdown(parseDailyMeta(p.meta).plan)"></div>
+          <p v-else class="text-dim">（空）</p>
         </div>
-        <div v-if="parseDailyMeta(p.meta).issues" class="report-block">
-          <span class="report-label">⚠️ 问题</span>
-          <span class="report-text">{{ parseDailyMeta(p.meta).issues }}</span>
+        <div class="daily-block">
+          <h4>⚠️ 问题</h4>
+          <div v-if="parseDailyMeta(p.meta).issues" class="post-content" v-html="renderMarkdown(parseDailyMeta(p.meta).issues)"></div>
+          <p v-else class="text-dim">（无）</p>
         </div>
       </div>
     </div>
