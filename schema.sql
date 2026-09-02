@@ -51,8 +51,21 @@ CREATE TABLE IF NOT EXISTS likes (
   PRIMARY KEY (user_id, post_id)
 );
 
+-- 里程碑/时间线表（明确什么时间点该完成什么）
+CREATE TABLE IF NOT EXISTS milestones (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  due_date TEXT NOT NULL,              -- 截止日期 'YYYY-MM-DD'
+  description TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'pending',  -- 'pending' | 'done'
+  assignee_id INTEGER,
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_posts_category ON posts(category, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_user ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_likes_post ON likes(post_id);
+CREATE INDEX IF NOT EXISTS idx_milestones_due ON milestones(due_date);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);

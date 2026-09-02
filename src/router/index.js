@@ -9,6 +9,7 @@ const routes = [
   { path: '/insight', name: 'insight', component: () => import('../views/CategoryView.vue'), props: { category: 'insight' } },
   { path: '/learn', name: 'learn', component: () => import('../views/CategoryView.vue'), props: { category: 'learn' } },
   { path: '/daily', name: 'daily', component: () => import('../views/DailyView.vue') },
+  { path: '/timeline', name: 'timeline', component: () => import('../views/TimelineView.vue') },
   { path: '/post/:id', name: 'post', component: () => import('../views/PostView.vue'), props: true },
   { path: '/admin', name: 'admin', component: () => import('../views/AdminView.vue'), meta: { requiresAdmin: true } },
   { path: '/report', name: 'report', component: () => import('../views/ReportView.vue'), meta: { requiresAdmin: true } },

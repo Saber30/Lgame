@@ -509,6 +509,51 @@ async function handleReports(request, env) {
   return json({ days, reports: [...grouped.values()] });
 }
 
+async function handleListMilestones(request, env) {
+  await requireUser(request, env);
+  const { results } = await env.DB.prepare(
+    `SELECT m.id, m.title, m.due_date, m.description, m.status, m.assignee_id, m.created_by,
+            u.username AS assignee_name
+       FROM milestones m LEFT JOIN users u ON u.id = m.assignee_id
+      ORDER BY m.due_date ASC, m.id ASC`
+  ).all();
+  return json({ milestones: results });
+}
+
+async function handleCreateMilestone(request, env) {
+  const admin = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const title = String(body.title || '').trim();
+  const dueDate = String(body.due_date || '').trim();
+  const description = String(body.description || '').trim();
+  if (!title) fail('标题不能为空');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) fail('截止日期格式应为 YYYY-MM-DD');
+  const assigneeId = body.assignee_id ? Number(body.assignee_id) : null;
+  const insert = await env.DB.prepare(
+    'INSERT INTO milestones (title, due_date, description, assignee_id, created_by) VALUES (?, ?, ?, ?, ?)'
+  ).bind(title, dueDate, description, assigneeId, admin.id).run();
+  return json({ id: insert.meta.last_row_id, message: '已添加' }, 201);
+}
+
+async function handleUpdateMilestone(request, env, id) {
+  const user = await requireUser(request, env);
+  const m = await env.DB.prepare('SELECT id, assignee_id FROM milestones WHERE id = ?').bind(id).first();
+  if (!m) fail('里程碑不存在', 404);
+  const body = await readJson(request);
+  if (body.status === 'done' || body.status === 'pending') {
+    if (user.role !== 'admin' && m.assignee_id !== user.id) fail('只有管理员或负责人可以操作', 403);
+    await env.DB.prepare('UPDATE milestones SET status = ? WHERE id = ?').bind(body.status, id).run();
+    return json({ ok: true });
+  }
+  fail('参数错误');
+}
+
+async function handleDeleteMilestone(request, env, id) {
+  await requireAdmin(request, env);
+  await env.DB.prepare('DELETE FROM milestones WHERE id = ?').bind(id).run();
+  return json({ ok: true });
+}
+
 async function handleStats(request, env) {
   await requireAdmin(request, env);
   const { c: users } = await env.DB.prepare('SELECT COUNT(*) AS c FROM users').first();
@@ -549,6 +594,10 @@ export async function handleApi(request, env) {
         if (method === 'POST') return await handleCreatePost(request, env);
       }
       if (seg[0] === 'users' && method === 'GET') return await handleListUsers(request, env);
+      if (seg[0] === 'milestones') {
+        if (method === 'GET') return await handleListMilestones(request, env);
+        if (method === 'POST') return await handleCreateMilestone(request, env);
+      }
     }
 
     if (seg[0] === 'posts' && seg.length === 2) {
@@ -582,6 +631,13 @@ export async function handleApi(request, env) {
       const id = Number(seg[1]);
       if (!Number.isInteger(id)) fail('参数错误');
       return await handleResetPassword(request, env, id);
+    }
+
+    if (seg[0] === 'milestones' && seg.length === 2) {
+      const id = Number(seg[1]);
+      if (!Number.isInteger(id)) fail('参数错误');
+      if (method === 'PATCH') return await handleUpdateMilestone(request, env, id);
+      if (method === 'DELETE') return await handleDeleteMilestone(request, env, id);
     }
 
     return json({ error: '接口不存在' }, 404);

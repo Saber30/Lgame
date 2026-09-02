@@ -536,3 +536,37 @@ html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
 .report-block { display: flex; gap: 8px; margin-bottom: 4px; align-items: baseline; }
 .report-label { font-size: 13px; color: var(--accent-2); white-space: nowrap; flex-shrink: 0; }
 .report-text { font-size: 14px; color: var(--text); word-break: break-word; white-space: pre-wrap; }
+
+/* ---- 时间线 ---- */
+.timeline { position: relative; padding-left: 22px; }
+.timeline::before { content: ''; position: absolute; left: 5px; top: 4px; bottom: 4px; width: 2px; background: var(--border); }
+.timeline-item { position: relative; margin-bottom: 16px; }
+.timeline-dot {
+  position: absolute;
+  left: -22px;
+  top: 16px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.timeline-dot.tl-done { background: var(--ok); }
+.timeline-dot.tl-overdue { background: var(--danger); }
+.timeline-dot.tl-today { background: #f5a623; }
+.timeline-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+.timeline-card.tl-card-done { opacity: 0.6; }
+.timeline-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.timeline-date { font-weight: 700; color: var(--accent-2); font-size: 14px; }
+.tl-badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.tl-badge.tl-done { background: rgba(46, 213, 115, 0.14); color: #3ecf7e; }
+.tl-badge.tl-overdue { background: rgba(255, 107, 129, 0.14); color: #ff8ca0; }
+.tl-badge.tl-today { background: rgba(255, 195, 66, 0.16); color: #f5a623; }
+.tl-badge.tl-pending { background: rgba(0, 210, 255, 0.14); color: #38dbff; }
+.timeline-title { font-size: 16px; margin-bottom: 6px; }
+.timeline-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }

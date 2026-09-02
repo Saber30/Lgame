@@ -22,6 +22,7 @@ async function onLogout() {
         <router-link to="/insight">🎮 心得</router-link>
         <router-link to="/learn">📚 学习</router-link>
         <router-link to="/daily">📝 日报</router-link>
+        <router-link to="/timeline">🗓️ 时间线</router-link>
         <div class="nav-auth">
           <a href="#" class="theme-toggle" :title="theme.theme === 'dark' ? '切换到浅色' : '切换到深色'" @click.prevent="theme.toggle()">
             {{ theme.theme === 'dark' ? '☀️' : '🌙' }}
