@@ -78,6 +78,7 @@ onMounted(load)
   <section v-if="auth.isLoggedIn" class="compose-card">
     <h2>📅 提交今日日报</h2>
     <n-form label-placement="top">
+      <p class="text-dim" style="margin-bottom: 6px">✍️ 三段内容都支持 Markdown 排版：<code># 标题</code>、<code>- 列表</code>、<code>**加粗**</code>、代码块、链接等</p>
       <n-form-item label="标题">
         <n-input v-model:value="form.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
       </n-form-item>

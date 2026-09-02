@@ -131,9 +131,21 @@ onMounted(load)
       <h1>{{ post.title }}</h1>
 
       <template v-if="post.category === 'daily'">
-        <div class="daily-block"><h4>✅ 今天完成</h4><p>{{ meta.done || '（空）' }}</p></div>
-        <div class="daily-block"><h4>📋 明日计划</h4><p>{{ meta.plan || '（空）' }}</p></div>
-        <div class="daily-block"><h4>⚠️ 遇到的问题</h4><p>{{ meta.issues || '（无）' }}</p></div>
+        <div class="daily-block">
+          <h4>✅ 今天完成</h4>
+          <div v-if="meta.done" class="post-content" v-html="renderMarkdown(meta.done)"></div>
+          <p v-else class="text-dim">（空）</p>
+        </div>
+        <div class="daily-block">
+          <h4>📋 明日计划</h4>
+          <div v-if="meta.plan" class="post-content" v-html="renderMarkdown(meta.plan)"></div>
+          <p v-else class="text-dim">（空）</p>
+        </div>
+        <div class="daily-block">
+          <h4>⚠️ 遇到的问题</h4>
+          <div v-if="meta.issues" class="post-content" v-html="renderMarkdown(meta.issues)"></div>
+          <p v-else class="text-dim">（无）</p>
+        </div>
         <div v-if="post.content" class="post-content" v-html="renderMarkdown(post.content)"></div>
       </template>
       <template v-else>
