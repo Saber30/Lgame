@@ -509,30 +509,92 @@ async function handleReports(request, env) {
   return json({ days, reports: [...grouped.values()] });
 }
 
-async function handleListMilestones(request, env) {
+async function handleListProjects(request, env) {
   await requireUser(request, env);
   const { results } = await env.DB.prepare(
-    `SELECT m.id, m.title, m.due_date, m.description, m.status, m.assignee_id, m.created_by,
+    `SELECT p.id, p.title, p.description, p.start_date, p.end_date, p.status, p.created_at,
+            (SELECT COUNT(*) FROM milestones m WHERE m.project_id = p.id) AS total_phases,
+            (SELECT COUNT(*) FROM milestones m WHERE m.project_id = p.id AND m.status = 'done') AS done_phases
+       FROM projects p
+      ORDER BY p.id DESC`
+  ).all();
+  return json({ projects: results });
+}
+
+async function handleCreateProject(request, env) {
+  const admin = await requireAdmin(request, env);
+  const body = await readJson(request);
+  const title = String(body.title || '').trim();
+  if (!title) fail('项目名称不能为空');
+  const description = String(body.description || '').trim();
+  let startDate = body.start_date ? String(body.start_date).trim() : null;
+  let endDate = body.end_date ? String(body.end_date).trim() : null;
+  if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) fail('开始日期格式应为 YYYY-MM-DD');
+  if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) fail('结束日期格式应为 YYYY-MM-DD');
+  const insert = await env.DB.prepare(
+    'INSERT INTO projects (title, description, start_date, end_date, created_by) VALUES (?, ?, ?, ?, ?)'
+  ).bind(title, description, startDate, endDate, admin.id).run();
+  return json({ id: insert.meta.last_row_id, message: '项目已创建' }, 201);
+}
+
+async function handleUpdateProject(request, env, id) {
+  const admin = await requireAdmin(request, env);
+  const p = await env.DB.prepare('SELECT id FROM projects WHERE id = ?').bind(id).first();
+  if (!p) fail('项目不存在', 404);
+  const body = await readJson(request);
+  if (body.status === 'active' || body.status === 'done') {
+    await env.DB.prepare('UPDATE projects SET status = ? WHERE id = ?').bind(body.status, id).run();
+    return json({ ok: true });
+  }
+  fail('参数错误');
+}
+
+async function handleDeleteProject(request, env, id) {
+  await requireAdmin(request, env);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM milestones WHERE project_id = ?').bind(id),
+    env.DB.prepare('DELETE FROM projects WHERE id = ?').bind(id),
+  ]);
+  return json({ ok: true });
+}
+
+async function handleListMilestones(request, env) {
+  await requireUser(request, env);
+  const url = new URL(request.url);
+  const projectId = parseInt(url.searchParams.get('project_id') || '', 10);
+  let where = '';
+  const args = [];
+  if (Number.isInteger(projectId)) {
+    where = 'WHERE m.project_id = ?';
+    args.push(projectId);
+  }
+  const { results } = await env.DB.prepare(
+    `SELECT m.id, m.project_id, m.title, m.start_date, m.due_date, m.description, m.status, m.assignee_id,
             u.username AS assignee_name
        FROM milestones m LEFT JOIN users u ON u.id = m.assignee_id
+      ${where}
       ORDER BY m.due_date ASC, m.id ASC`
-  ).all();
+  ).bind(...args).all();
   return json({ milestones: results });
 }
 
 async function handleCreateMilestone(request, env) {
   const admin = await requireAdmin(request, env);
   const body = await readJson(request);
+  const projectId = Number(body.project_id);
   const title = String(body.title || '').trim();
   const dueDate = String(body.due_date || '').trim();
+  let startDate = body.start_date ? String(body.start_date).trim() : null;
   const description = String(body.description || '').trim();
+  if (!Number.isInteger(projectId)) fail('请选择所属项目');
   if (!title) fail('标题不能为空');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) fail('截止日期格式应为 YYYY-MM-DD');
+  if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) fail('开始日期格式应为 YYYY-MM-DD');
   const assigneeId = body.assignee_id ? Number(body.assignee_id) : null;
   const insert = await env.DB.prepare(
-    'INSERT INTO milestones (title, due_date, description, assignee_id, created_by) VALUES (?, ?, ?, ?, ?)'
-  ).bind(title, dueDate, description, assigneeId, admin.id).run();
-  return json({ id: insert.meta.last_row_id, message: '已添加' }, 201);
+    'INSERT INTO milestones (project_id, title, start_date, due_date, description, assignee_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).bind(projectId, title, startDate, dueDate, description, assigneeId, admin.id).run();
+  return json({ id: insert.meta.last_row_id, message: '阶段已添加' }, 201);
 }
 
 async function handleUpdateMilestone(request, env, id) {
@@ -639,6 +701,10 @@ export async function handleApi(request, env) {
         if (method === 'POST') return await handleCreatePost(request, env);
       }
       if (seg[0] === 'users' && method === 'GET') return await handleListUsers(request, env);
+      if (seg[0] === 'projects') {
+        if (method === 'GET') return await handleListProjects(request, env);
+        if (method === 'POST') return await handleCreateProject(request, env);
+      }
       if (seg[0] === 'milestones') {
         if (method === 'GET') return await handleListMilestones(request, env);
         if (method === 'POST') return await handleCreateMilestone(request, env);
@@ -684,6 +750,13 @@ export async function handleApi(request, env) {
       if (!Number.isInteger(id)) fail('参数错误');
       if (method === 'PATCH') return await handleUpdateMilestone(request, env, id);
       if (method === 'DELETE') return await handleDeleteMilestone(request, env, id);
+    }
+
+    if (seg[0] === 'projects' && seg.length === 2) {
+      const id = Number(seg[1]);
+      if (!Number.isInteger(id)) fail('参数错误');
+      if (method === 'PATCH') return await handleUpdateProject(request, env, id);
+      if (method === 'DELETE') return await handleDeleteProject(request, env, id);
     }
 
     if (seg[0] === 'files' && seg.length === 2 && method === 'GET') {
