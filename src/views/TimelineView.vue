@@ -155,7 +155,7 @@ onMounted(load)
         <n-input v-model:value="form.title" maxlength="100" placeholder="例如：完成战斗系统原型" />
       </n-form-item>
       <n-form-item label="截止日期">
-        <n-date-picker v-model:formatted-value="form.due_date" type="date" value-format="yyyy-MM-dd" style="width: 100%" />
+        <input v-model="form.due_date" type="date" class="native-date-input" />
       </n-form-item>
       <n-form-item label="负责人（可选）">
         <n-select
