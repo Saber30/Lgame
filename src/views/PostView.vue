@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { categoryLabel, fmtTime, parseDailyMeta } from '../utils/format'
 import { renderMarkdown } from '../utils/markdown'
 import CommentSection from '../components/CommentSection.vue'
+import FileUploadButton from '../components/FileUploadButton.vue'
 
 const props = defineProps({ id: { type: [String, Number], required: true } })
 const router = useRouter()
@@ -87,6 +88,15 @@ async function submitEdit() {
     message.error(e.message)
   } finally {
     editSubmitting.value = false
+  }
+}
+
+function onUploaded(data) {
+  const md = data.type.startsWith('image/') ? `![](${data.url})` : `[${data.filename}](${data.url})`
+  if (post.value.category === 'daily') {
+    editForm.done = editForm.done ? editForm.done + '\n' + md : md
+  } else {
+    editForm.content = editForm.content ? editForm.content + '\n' + md : md
   }
 }
 
@@ -199,6 +209,10 @@ onMounted(load)
             <n-input v-model:value="editForm.content" type="textarea" :rows="8" />
           </n-form-item>
         </template>
+        <div style="margin-top: 4px">
+          <FileUploadButton @uploaded="onUploaded" />
+          <span class="text-dim" style="margin-left: 8px; font-size: 12px">图片自动预览，其他文件作为附件下载</span>
+        </div>
       </n-form>
       <template #footer>
         <div style="display: flex; justify-content: flex-end; gap: 10px">

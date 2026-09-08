@@ -6,6 +6,7 @@ import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
 import PostCard from '../components/PostCard.vue'
 import PaginationBar from '../components/PaginationBar.vue'
+import FileUploadButton from '../components/FileUploadButton.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -70,6 +71,11 @@ async function submit() {
   }
 }
 
+function onUploaded(data) {
+  const md = data.type.startsWith('image/') ? `![](${data.url})` : `[${data.filename}](${data.url})`
+  form.done = form.done ? form.done + '\n' + md : md
+}
+
 function onPageChange(p) {
   page.value = p
   load()
@@ -114,6 +120,10 @@ onMounted(() => {
       <n-form-item label="✅ 今天完成了什么">
         <n-input v-model:value="form.done" type="textarea" :rows="4" maxlength="10000" placeholder="今天做的工作、完成的任务、推进到哪一步了…" />
       </n-form-item>
+      <div style="margin-bottom: 6px">
+        <FileUploadButton @uploaded="onUploaded" />
+        <span class="text-dim" style="margin-left: 8px; font-size: 12px">上传后插入到「今天完成」</span>
+      </div>
       <n-form-item label="📋 明天计划做什么">
         <n-input v-model:value="form.plan" type="textarea" :rows="3" maxlength="10000" placeholder="明天的计划与安排…" />
       </n-form-item>

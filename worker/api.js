@@ -554,6 +554,51 @@ async function handleDeleteMilestone(request, env, id) {
   return json({ ok: true });
 }
 
+async function handleFileUpload(request, env) {
+  await requireUser(request, env);
+  const form = await request.formData();
+  const file = form.get('file');
+  if (!file || typeof file === 'string' || !file.name) fail('没有收到文件');
+  if (file.size > 10 * 1024 * 1024) fail('文件不能超过 10MB');
+
+  const id = newToken();
+  const buf = await file.arrayBuffer();
+  const metadata = {
+    filename: file.name,
+    type: file.type || 'application/octet-stream',
+    size: file.size,
+  };
+  await env.FILES.put(id, buf, { metadata });
+  return json(
+    { id, url: '/api/files/' + id, filename: metadata.filename, type: metadata.type, size: metadata.size },
+    201
+  );
+}
+
+function isPreviewable(type) {
+  return /^image\//.test(type) || type === 'application/pdf';
+}
+
+async function handleFileGet(env, request, id) {
+  await requireUser(request, env);
+  const item = await env.FILES.getWithMetadata(id, 'arrayBuffer');
+  if (!item || !item.value) fail('文件不存在', 404);
+  const meta = item.metadata || {};
+  const url = new URL(request.url);
+  const download = url.searchParams.get('download') === '1';
+  const headers = {
+    'Content-Type': meta.type || 'application/octet-stream',
+    'Cache-Control': 'public, max-age=86400',
+  };
+  if (download || !isPreviewable(meta.type)) {
+    headers['Content-Disposition'] =
+      `attachment; filename*=UTF-8''${encodeURIComponent(meta.filename || 'file')}`;
+  } else {
+    headers['Content-Disposition'] = 'inline';
+  }
+  return new Response(item.value, { headers });
+}
+
 async function handleStats(request, env) {
   await requireAdmin(request, env);
   const { c: users } = await env.DB.prepare('SELECT COUNT(*) AS c FROM users').first();
@@ -598,6 +643,7 @@ export async function handleApi(request, env) {
         if (method === 'GET') return await handleListMilestones(request, env);
         if (method === 'POST') return await handleCreateMilestone(request, env);
       }
+      if (seg[0] === 'files' && method === 'POST') return await handleFileUpload(request, env);
     }
 
     if (seg[0] === 'posts' && seg.length === 2) {
@@ -638,6 +684,10 @@ export async function handleApi(request, env) {
       if (!Number.isInteger(id)) fail('参数错误');
       if (method === 'PATCH') return await handleUpdateMilestone(request, env, id);
       if (method === 'DELETE') return await handleDeleteMilestone(request, env, id);
+    }
+
+    if (seg[0] === 'files' && seg.length === 2 && method === 'GET') {
+      return await handleFileGet(env, request, seg[1]);
     }
 
     return json({ error: '接口不存在' }, 404);

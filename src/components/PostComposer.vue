@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { api } from '../api'
+import FileUploadButton from './FileUploadButton.vue'
 
 const props = defineProps({
   category: { type: String, required: true },
@@ -51,6 +52,11 @@ async function submit() {
     submitting.value = false
   }
 }
+
+function onUploaded(data) {
+  const md = data.type.startsWith('image/') ? `![](${data.url})` : `[${data.filename}](${data.url})`
+  form.content = form.content ? form.content + '\n' + md : md
+}
 </script>
 
 <template>
@@ -73,6 +79,10 @@ async function submit() {
           :placeholder="PLACEHOLDER[category].content"
         />
       </n-form-item>
+      <div style="margin-bottom: 14px">
+        <FileUploadButton @uploaded="onUploaded" />
+        <span class="text-dim" style="margin-left: 8px; font-size: 12px">图片自动预览，其他文件作为附件下载</span>
+      </div>
       <n-button type="primary" :loading="submitting" @click="submit">发布</n-button>
     </n-form>
   </section>

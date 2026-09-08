@@ -31,4 +31,12 @@ export const api = {
   del(path) {
     return this.request(path, { method: 'DELETE' })
   },
+  async uploadFile(file) {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch('/api/files', { method: 'POST', body: form })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new ApiError(data.error || '上传失败', res.status)
+    return data
+  },
 }

@@ -22,6 +22,11 @@ crons = ["0 */2 * * *"]
 [ai]
 binding = "AI"
 
+# KV 绑定：文件上传存储（免费 1GB，不绑卡）
+[[kv_namespaces]]
+binding = "FILES"
+id = "37cff58c87844475bdf91a1b5c5947f5"
+
 # D1 数据库绑定，变量名必须是 DB（代码中通过 env.DB 访问）
 [[d1_databases]]
 binding = "DB"
