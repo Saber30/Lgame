@@ -546,6 +546,15 @@ async function handleUpdateProject(request, env, id) {
     await env.DB.prepare('UPDATE projects SET status = ? WHERE id = ?').bind(body.status, id).run();
     return json({ ok: true });
   }
+  const title = String(body.title || '').trim();
+  if (title) {
+    const startDate = body.start_date ? String(body.start_date).trim() : null;
+    const endDate = body.end_date ? String(body.end_date).trim() : null;
+    const description = String(body.description || '').trim();
+    await env.DB.prepare('UPDATE projects SET title = ?, start_date = ?, end_date = ?, description = ? WHERE id = ?')
+      .bind(title, startDate, endDate, description, id).run();
+    return json({ ok: true });
+  }
   fail('参数错误');
 }
 
@@ -600,14 +609,56 @@ async function handleCreateMilestone(request, env) {
 async function handleUpdateMilestone(request, env, id) {
   const user = await requireUser(request, env);
   const m = await env.DB.prepare('SELECT id, assignee_id FROM milestones WHERE id = ?').bind(id).first();
-  if (!m) fail('里程碑不存在', 404);
+  if (!m) fail('阶段不存在', 404);
   const body = await readJson(request);
   if (body.status === 'done' || body.status === 'pending') {
     if (user.role !== 'admin' && m.assignee_id !== user.id) fail('只有管理员或负责人可以操作', 403);
     await env.DB.prepare('UPDATE milestones SET status = ? WHERE id = ?').bind(body.status, id).run();
     return json({ ok: true });
   }
+  const title = String(body.title || '').trim();
+  if (title) {
+    if (user.role !== 'admin') fail('只有管理员可以编辑', 403);
+    const startDate = body.start_date ? String(body.start_date).trim() : null;
+    const dueDate = String(body.due_date || '').trim();
+    const description = String(body.description || '').trim();
+    const assigneeId = body.assignee_id ? Number(body.assignee_id) : null;
+    await env.DB.prepare('UPDATE milestones SET title = ?, start_date = ?, due_date = ?, description = ?, assignee_id = ? WHERE id = ?')
+      .bind(title, startDate, dueDate, description, assigneeId, id).run();
+    return json({ ok: true });
+  }
   fail('参数错误');
+}
+
+async function handleListReplies(request, env) {
+  await requireUser(request, env);
+  const url = new URL(request.url);
+  const targetType = url.searchParams.get('target_type');
+  const targetId = parseInt(url.searchParams.get('target_id') || '', 10);
+  if (!['project', 'milestone'].includes(targetType) || !Number.isInteger(targetId)) fail('参数错误');
+  const { results } = await env.DB.prepare(
+    `SELECT r.id, r.target_type, r.target_id, r.content, r.created_at, r.user_id, u.username AS author_name
+       FROM replies r JOIN users u ON u.id = r.user_id
+      WHERE r.target_type = ? AND r.target_id = ?
+      ORDER BY r.created_at ASC, r.id ASC`
+  ).bind(targetType, targetId).all();
+  return json({ replies: results });
+}
+
+async function handleCreateReply(request, env) {
+  const user = await requireUser(request, env);
+  const body = await readJson(request);
+  const targetType = String(body.target_type || '');
+  const targetId = Number(body.target_id);
+  const content = String(body.content || '').trim();
+  if (!['project', 'milestone'].includes(targetType)) fail('回复目标不正确');
+  if (!Number.isInteger(targetId)) fail('参数错误');
+  if (!content) fail('回复不能为空');
+  if (content.length > 2000) fail('回复不能超过 2000 字');
+  const insert = await env.DB.prepare(
+    'INSERT INTO replies (target_type, target_id, user_id, content) VALUES (?, ?, ?, ?)'
+  ).bind(targetType, targetId, user.id, content).run();
+  return json({ id: insert.meta.last_row_id, message: '回复成功' }, 201);
 }
 
 async function handleDeleteMilestone(request, env, id) {
@@ -708,6 +759,10 @@ export async function handleApi(request, env) {
       if (seg[0] === 'milestones') {
         if (method === 'GET') return await handleListMilestones(request, env);
         if (method === 'POST') return await handleCreateMilestone(request, env);
+      }
+      if (seg[0] === 'replies') {
+        if (method === 'GET') return await handleListReplies(request, env);
+        if (method === 'POST') return await handleCreateReply(request, env);
       }
       if (seg[0] === 'files' && method === 'POST') return await handleFileUpload(request, env);
     }
