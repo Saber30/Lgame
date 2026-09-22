@@ -122,6 +122,52 @@ function onDelete() {
   })
 }
 
+const previewFile = ref(null)
+let clickTimer = null
+
+const previewType = computed(() => {
+  if (!previewFile.value) return 'none'
+  const name = (previewFile.value.filename || '').toLowerCase()
+  if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) return 'image'
+  if (/\.pdf$/.test(name)) return 'pdf'
+  return 'other'
+})
+
+function isFileLink(target) {
+  const a = target.closest('a')
+  if (!a) return null
+  const href = a.getAttribute('href')
+  if (!href || !href.startsWith('/api/files/')) return null
+  return { a, href }
+}
+
+function onContentClick(e) {
+  const link = isFileLink(e.target)
+  if (!link) return
+  e.preventDefault()
+  if (clickTimer) clearTimeout(clickTimer)
+  const url = link.href
+  const filename = link.a.textContent.trim()
+  clickTimer = setTimeout(() => {
+    previewFile.value = { url, filename }
+    clickTimer = null
+  }, 220)
+}
+
+function onContentDblClick(e) {
+  const link = isFileLink(e.target)
+  if (!link) return
+  e.preventDefault()
+  if (clickTimer) {
+    clearTimeout(clickTimer)
+    clickTimer = null
+  }
+  const dl = document.createElement('a')
+  dl.href = link.href + '?download=1'
+  dl.download = link.a.textContent.trim()
+  dl.click()
+}
+
 onMounted(load)
 </script>
 
@@ -132,7 +178,7 @@ onMounted(load)
   <template v-else-if="post">
     <router-link :to="categoryPath(post.category)" class="back-link">← 返回列表</router-link>
 
-    <article class="post-detail">
+    <article class="post-detail" @click="onContentClick" @dblclick="onContentDblClick">
       <div class="post-meta">
         <span class="badge" :class="'badge-' + post.category">{{ categoryLabel(post.category) }}</span>
         <span class="post-author">{{ post.author_name }}</span>
@@ -181,6 +227,22 @@ onMounted(load)
     </article>
 
     <CommentSection :post-id="Number(post.id)" :comments="data.comments" @added="onCommentAdded" />
+
+    <div v-if="previewFile" class="preview-panel">
+      <div class="preview-panel-head">
+        <span class="preview-panel-title">📄 {{ previewFile.filename }}</span>
+        <n-button size="tiny" quaternary @click="previewFile = null">✕</n-button>
+      </div>
+      <div class="preview-panel-body">
+        <img v-if="previewType === 'image'" :src="previewFile.url" alt="" />
+        <iframe v-else-if="previewType === 'pdf'" :src="previewFile.url"></iframe>
+        <div v-else class="preview-other">
+          <p>{{ previewFile.filename }}</p>
+          <p class="text-dim">该类型文件暂不支持在线预览</p>
+          <a :href="previewFile.url + '?download=1'"><n-button size="small" type="primary">下载文件</n-button></a>
+        </div>
+      </div>
+    </div>
 
     <n-modal v-model:show="editVisible" preset="card" title="编辑帖子" style="width: 600px">
       <n-form label-placement="top">
