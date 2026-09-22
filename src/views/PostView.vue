@@ -124,6 +124,23 @@ function onDelete() {
 
 const previewFile = ref(null)
 let clickTimer = null
+const previewWidth = ref(360)
+
+function startResize(e) {
+  e.preventDefault()
+  document.addEventListener('mousemove', onResize)
+  document.addEventListener('mouseup', stopResize)
+}
+
+function onResize(e) {
+  const newWidth = window.innerWidth - e.clientX - 20
+  previewWidth.value = Math.min(760, Math.max(240, newWidth))
+}
+
+function stopResize() {
+  document.removeEventListener('mousemove', onResize)
+  document.removeEventListener('mouseup', stopResize)
+}
 
 const previewType = computed(() => {
   if (!previewFile.value) return 'none'
@@ -249,7 +266,8 @@ onMounted(load)
 
     <CommentSection :post-id="Number(post.id)" :comments="data.comments" @added="onCommentAdded" />
 
-    <div v-if="previewFile" class="preview-panel">
+    <div v-if="previewFile" class="preview-panel" :style="{ width: previewWidth + 'px' }">
+      <div class="preview-resizer" @mousedown="startResize"></div>
       <div class="preview-panel-head">
         <span class="preview-panel-title">📄 {{ previewFile.filename }}</span>
         <n-button size="tiny" quaternary @click="previewFile = null">✕</n-button>
