@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { api } from '../api'
@@ -130,7 +130,28 @@ const previewType = computed(() => {
   const name = (previewFile.value.filename || '').toLowerCase()
   if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) return 'image'
   if (/\.pdf$/.test(name)) return 'pdf'
+  if (/\.(md|markdown|mdown)$/.test(name)) return 'markdown'
   return 'other'
+})
+
+const markdownContent = ref('')
+const markdownLoading = ref(false)
+
+watch(previewFile, async (f) => {
+  markdownContent.value = ''
+  if (!f) return
+  const name = (f.filename || '').toLowerCase()
+  if (!/\.(md|markdown|mdown)$/.test(name)) return
+  markdownLoading.value = true
+  try {
+    const res = await fetch(f.url)
+    const text = await res.text()
+    markdownContent.value = renderMarkdown(text)
+  } catch {
+    markdownContent.value = ''
+  } finally {
+    markdownLoading.value = false
+  }
 })
 
 function isFileLink(target) {
@@ -236,6 +257,10 @@ onMounted(load)
       <div class="preview-panel-body">
         <img v-if="previewType === 'image'" :src="previewFile.url" alt="" />
         <iframe v-else-if="previewType === 'pdf'" :src="previewFile.url"></iframe>
+        <div v-else-if="previewType === 'markdown'">
+          <div v-if="markdownLoading" class="text-dim">加载中…</div>
+          <div v-else class="post-content" v-html="markdownContent"></div>
+        </div>
         <div v-else class="preview-other">
           <p>{{ previewFile.filename }}</p>
           <p class="text-dim">该类型文件暂不支持在线预览</p>
