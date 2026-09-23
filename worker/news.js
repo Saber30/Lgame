@@ -45,17 +45,18 @@ export async function runNewsCrawler(env) {
           }
         }
 
-        await env.DB.prepare(
-          "INSERT INTO posts (user_id, category, title, content, link, meta, status) VALUES (?, 'news', ?, ?, ?, ?, 'approved')"
-        )
-          .bind(
-            author.id,
-            title.slice(0, 100),
-            buildContent(feed, description, item.link),
-            item.link,
-            JSON.stringify({ source: feed.name, region: feed.region })
-          )
-          .run();
+await env.DB.prepare(
+    "INSERT INTO posts (user_id, category, title, content, link, cover, meta, status) VALUES (?, 'news', ?, ?, ?, ?, ?, 'approved')"
+  )
+    .bind(
+      author.id,
+      title.slice(0, 100),
+      buildContent(feed, description, item.link),
+      item.link,
+      item.image,
+      JSON.stringify({ source: feed.name, region: feed.region })
+    )
+    .run();
         added++;
       }
     } catch (e) {
@@ -81,9 +82,33 @@ function parseRss(xml) {
       title: field(m[0], 'title'),
       link: field(m[0], 'link'),
       description: field(m[0], 'description'),
+      image: extractImage(m[0]),
     });
   }
   return items;
+}
+
+// 从一条 RSS item 里提取第一张图片 URL（enclosure / media / description 里的 img）
+function extractImage(block) {
+  let m = block.match(/<enclosure[^>]*>/i);
+  if (m) {
+    const url = m[0].match(/url=["']([^"']+)["']/i);
+    const type = m[0].match(/type=["']([^"']+)["']/i);
+    if (url && type && /^image\//i.test(type[1])) return decodeEntities(url[1]);
+  }
+  m = block.match(/<media:(?:content|thumbnail)[^>]*url=["']([^"']+)["']/i);
+  if (m) return decodeEntities(m[1]);
+  m = block.match(/<description[\s\S]*?<\/description>/i);
+  if (m) {
+    const img = m[0].match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (img) return decodeEntities(img[1]);
+  }
+  m = block.match(/<content:encoded[\s\S]*?<\/content:encoded>/i);
+  if (m) {
+    const img = m[0].match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (img) return decodeEntities(img[1]);
+  }
+  return null;
 }
 
 function field(block, name) {

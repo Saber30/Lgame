@@ -19,7 +19,7 @@ const error = ref('')
 const PAGE_SIZE = 10
 const checkin = ref(null)
 
-const form = reactive({ title: '', done: '', plan: '', issues: '' })
+const form = reactive({ title: '', done: '', plan: '', issues: '', cover: '' })
 const submitting = ref(false)
 
 async function load() {
@@ -51,13 +51,14 @@ async function submit() {
   }
   submitting.value = true
   try {
-    const data = await api.post('/posts', {
-      category: 'daily',
-      title: form.title,
-      done: form.done,
-      plan: form.plan,
-      issues: form.issues,
-    })
+const data = await api.post('/posts', {
+  category: 'daily',
+  title: form.title,
+  done: form.done,
+  plan: form.plan,
+  issues: form.issues,
+  cover: form.cover || undefined,
+})
     message.success('日报已提交 ✅')
     form.title = ''
     form.done = ''
@@ -74,6 +75,30 @@ async function submit() {
 function onUploaded(data) {
   const md = data.type.startsWith('image/') ? `![](${data.url})` : `[${data.filename}](${data.url})`
   form.done = form.done ? form.done + '\n' + md : md
+}
+
+const coverInput = ref(null)
+const coverUploading = ref(false)
+
+async function onCoverChange(e) {
+  const file = e.target.files && e.target.files[0]
+  e.target.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) return message.warning('请选择图片文件')
+  if (file.size > 10 * 1024 * 1024) return message.warning('图片不能超过 10MB')
+  coverUploading.value = true
+  try {
+    const data = await api.uploadFile(file)
+    form.cover = data.url
+  } catch (err) {
+    message.error(err.message)
+  } finally {
+    coverUploading.value = false
+  }
+}
+
+function removeCover() {
+  form.cover = ''
 }
 
 function onPageChange(p) {
@@ -116,6 +141,16 @@ onMounted(() => {
       <p class="text-dim" style="margin-bottom: 6px">✍️ 三段内容都支持 Markdown 排版：<code># 标题</code>、<code>- 列表</code>、<code>**加粗**</code>、代码块、链接等</p>
       <n-form-item label="标题">
         <n-input v-model:value="form.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
+      </n-form-item>
+      <n-form-item label="头图（可选）">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="cover-box" @click="coverInput.click()">
+            <img v-if="form.cover" :src="form.cover" alt="" />
+            <span v-else>＋ 上传头图</span>
+          </div>
+          <n-button v-if="form.cover" size="small" @click="removeCover">移除</n-button>
+          <input ref="coverInput" type="file" accept="image/*" style="display: none" @change="onCoverChange" />
+        </div>
       </n-form-item>
       <n-form-item label="✅ 今天完成了什么">
         <n-input v-model:value="form.done" type="textarea" :rows="4" maxlength="10000" placeholder="今天做的工作、完成的任务、推进到哪一步了…" />
