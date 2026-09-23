@@ -203,7 +203,7 @@ async function handleListPosts(url, env, request) {
   }
 
   const { results } = await env.DB.prepare(
-    `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.meta, p.created_at,
+    `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.cover, p.meta, p.created_at,
             u.username AS author_name,
             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id AND l.user_id = ?) AS liked_by_me
@@ -256,10 +256,13 @@ async function handleCreatePost(request, env) {
     if (link.length > 500) fail('链接过长');
   }
 
+  let cover = body.cover ? String(body.cover).trim() : null;
+  if (cover && cover.length > 500) fail('头图链接过长');
+
   const insert = await env.DB.prepare(
-    'INSERT INTO posts (user_id, category, title, content, link, meta) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO posts (user_id, category, title, content, link, cover, meta) VALUES (?, ?, ?, ?, ?, ?, ?)'
   )
-    .bind(user.id, category, title, content, link, meta)
+    .bind(user.id, category, title, content, link, cover, meta)
     .run();
   return json({ id: insert.meta.last_row_id, message: '发布成功' }, 201);
 }
@@ -269,7 +272,7 @@ async function handleGetPost(env, request, id) {
   const uid = user ? user.id : 0;
 
   const post = await env.DB.prepare(
-    `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.meta, p.status, p.created_at,
+    `SELECT p.id, p.user_id AS author_id, p.category, p.title, p.content, p.link, p.cover, p.meta, p.status, p.created_at,
             u.username AS author_name,
             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM likes l WHERE l.post_id = p.id AND l.user_id = ?) AS liked_by_me
@@ -344,8 +347,11 @@ async function handleUpdatePost(request, env, id) {
   if (title.length > 100) fail('标题不能超过 100 字');
   if (content.length > 10000) fail('内容不能超过 10000 字');
 
-  await env.DB.prepare('UPDATE posts SET title = ?, content = ?, link = ?, meta = ? WHERE id = ?')
-    .bind(title, content, link, meta, id)
+  let cover = body.cover ? String(body.cover).trim() : null;
+  if (cover && cover.length > 500) fail('头图链接过长');
+
+  await env.DB.prepare('UPDATE posts SET title = ?, content = ?, link = ?, cover = ?, meta = ? WHERE id = ?')
+    .bind(title, content, link, cover, meta, id)
     .run();
   return json({ ok: true, message: '已保存' });
 }

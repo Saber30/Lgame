@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS posts (
   title TEXT NOT NULL,
   content TEXT NOT NULL DEFAULT '',
   link TEXT,
+  cover TEXT,                                -- 头图 URL（可为空）
   meta TEXT,
   status TEXT NOT NULL DEFAULT 'approved',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))

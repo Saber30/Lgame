@@ -10,7 +10,7 @@ const props = defineProps({
 const emit = defineEmits(['created'])
 
 const message = useMessage()
-const form = reactive({ title: '', content: '', link: '' })
+const form = reactive({ title: '', content: '', link: '', cover: '' })
 const submitting = ref(false)
 
 const isNews = computed(() => props.category === 'news')
@@ -35,12 +35,13 @@ async function submit() {
   if (!form.content.trim()) return message.warning('请填写内容')
   submitting.value = true
   try {
-    const data = await api.post('/posts', {
-      category: props.category,
-      title: form.title,
-      content: form.content,
-      link: form.link || undefined,
-    })
+const data = await api.post('/posts', {
+  category: props.category,
+  title: form.title,
+  content: form.content,
+  link: form.link || undefined,
+  cover: form.cover || undefined,
+})
     message.success('发布成功')
     emit('created', data.id)
     form.title = ''
@@ -57,6 +58,30 @@ function onUploaded(data) {
   const md = data.type.startsWith('image/') ? `![](${data.url})` : `[${data.filename}](${data.url})`
   form.content = form.content ? form.content + '\n' + md : md
 }
+
+const coverInput = ref(null)
+const coverUploading = ref(false)
+
+async function onCoverChange(e) {
+  const file = e.target.files && e.target.files[0]
+  e.target.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) return message.warning('请选择图片文件')
+  if (file.size > 10 * 1024 * 1024) return message.warning('图片不能超过 10MB')
+  coverUploading.value = true
+  try {
+    const data = await api.uploadFile(file)
+    form.cover = data.url
+  } catch (err) {
+    message.error(err.message)
+  } finally {
+    coverUploading.value = false
+  }
+}
+
+function removeCover() {
+  form.cover = ''
+}
 </script>
 
 <template>
@@ -68,6 +93,17 @@ function onUploaded(data) {
       </n-form-item>
       <n-form-item v-if="isNews" label="原文链接（建议填写）">
         <n-input v-model:value="form.link" placeholder="https://…" />
+      </n-form-item>
+      <n-form-item label="头图（可选）">
+        <div style="display: flex; align-items: center; gap: 12px">
+          <div class="cover-box" @click="coverInput.click()">
+            <img v-if="form.cover" :src="form.cover" alt="" />
+            <span v-else>＋ 上传头图</span>
+          </div>
+          <n-button v-if="form.cover" size="small" @click="removeCover">移除</n-button>
+          <span class="text-dim" style="font-size: 12px">列表卡片上会显示这张图</span>
+          <input ref="coverInput" type="file" accept="image/*" style="display: none" @change="onCoverChange" />
+        </div>
       </n-form-item>
       <n-form-item label="内容">
         <n-input

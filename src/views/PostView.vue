@@ -217,6 +217,9 @@ onMounted(load)
     <router-link :to="categoryPath(post.category)" class="back-link">← 返回列表</router-link>
 
     <article class="post-detail" @click="onContentClick" @dblclick="onContentDblClick">
+      <div v-if="post.cover" class="post-cover">
+        <img :src="post.cover" alt="" />
+      </div>
       <div class="post-meta">
         <span class="badge" :class="'badge-' + post.category">{{ categoryLabel(post.category) }}</span>
         <span class="post-author">{{ post.author_name }}</span>
