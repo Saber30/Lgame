@@ -95,3 +95,17 @@ CREATE TABLE IF NOT EXISTS replies (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_replies_target ON replies(target_type, target_id);
+
+-- 策划案文档表（parent_id 构建策划树）
+CREATE TABLE IF NOT EXISTS design_docs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  parent_id INTEGER,                              -- 父文档 id，NULL 表示根节点
+  title TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'other',         -- 策划类型
+  content TEXT NOT NULL DEFAULT '',
+  cover TEXT,                                     -- 头图 URL（可选）
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_design_parent ON design_docs(parent_id);

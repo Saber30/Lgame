@@ -718,6 +718,63 @@ async function handleFileGet(env, request, id) {
   return new Response(item.value, { headers });
 }
 
+async function handleListDesignDocs(request, env) {
+  await requireUser(request, env);
+  const { results } = await env.DB.prepare(
+    `SELECT d.id, d.parent_id, d.title, d.category, d.content, d.cover, d.created_at, d.updated_at,
+            u.username AS author_name
+       FROM design_docs d LEFT JOIN users u ON u.id = d.created_by
+      ORDER BY d.id ASC`
+  ).all();
+  return json({ docs: results });
+}
+
+async function handleCreateDesignDoc(request, env) {
+  const user = await requireUser(request, env);
+  const body = await readJson(request);
+  const title = String(body.title || '').trim();
+  if (!title) fail('标题不能为空');
+  const parentId = body.parent_id ? Number(body.parent_id) : null;
+  const category = String(body.category || 'other').trim();
+  const content = String(body.content || '').trim();
+  const cover = body.cover ? String(body.cover).trim() : null;
+  const insert = await env.DB.prepare(
+    'INSERT INTO design_docs (parent_id, title, category, content, cover, created_by) VALUES (?, ?, ?, ?, ?, ?)'
+  ).bind(parentId, title, category, content, cover, user.id).run();
+  return json({ id: insert.meta.last_row_id, message: '已创建' }, 201);
+}
+
+async function handleUpdateDesignDoc(request, env, id) {
+  const user = await requireUser(request, env);
+  const doc = await env.DB.prepare('SELECT id FROM design_docs WHERE id = ?').bind(id).first();
+  if (!doc) fail('文档不存在', 404);
+  const body = await readJson(request);
+  const title = String(body.title || '').trim();
+  if (!title) fail('标题不能为空');
+  const parentId = body.parent_id ? Number(body.parent_id) : null;
+  const category = String(body.category || 'other').trim();
+  const content = String(body.content || '').trim();
+  const cover = body.cover ? String(body.cover).trim() : null;
+  await env.DB.prepare(
+    "UPDATE design_docs SET parent_id = ?, title = ?, category = ?, content = ?, cover = ?, updated_at = datetime('now') WHERE id = ?"
+  ).bind(parentId, title, category, content, cover, id).run();
+  return json({ ok: true, message: '已保存' });
+}
+
+async function deleteDesignDocRecursive(env, id) {
+  const { results } = await env.DB.prepare('SELECT id FROM design_docs WHERE parent_id = ?').bind(id).all();
+  for (const c of results) {
+    await deleteDesignDocRecursive(env, c.id);
+  }
+  await env.DB.prepare('DELETE FROM design_docs WHERE id = ?').bind(id).run();
+}
+
+async function handleDeleteDesignDoc(request, env, id) {
+  await requireAdmin(request, env);
+  await deleteDesignDocRecursive(env, id);
+  return json({ ok: true });
+}
+
 async function handleStats(request, env) {
   await requireAdmin(request, env);
   const { c: users } = await env.DB.prepare('SELECT COUNT(*) AS c FROM users').first();
@@ -769,6 +826,10 @@ export async function handleApi(request, env) {
       if (seg[0] === 'replies') {
         if (method === 'GET') return await handleListReplies(request, env);
         if (method === 'POST') return await handleCreateReply(request, env);
+      }
+      if (seg[0] === 'design-docs') {
+        if (method === 'GET') return await handleListDesignDocs(request, env);
+        if (method === 'POST') return await handleCreateDesignDoc(request, env);
       }
       if (seg[0] === 'files' && method === 'POST') return await handleFileUpload(request, env);
     }
@@ -822,6 +883,13 @@ export async function handleApi(request, env) {
 
     if (seg[0] === 'files' && seg.length === 2 && method === 'GET') {
       return await handleFileGet(env, request, seg[1]);
+    }
+
+    if (seg[0] === 'design-docs' && seg.length === 2) {
+      const id = Number(seg[1]);
+      if (!Number.isInteger(id)) fail('参数错误');
+      if (method === 'PATCH') return await handleUpdateDesignDoc(request, env, id);
+      if (method === 'DELETE') return await handleDeleteDesignDoc(request, env, id);
     }
 
     return json({ error: '接口不存在' }, 404);
