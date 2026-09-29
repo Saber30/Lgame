@@ -65,7 +65,7 @@ function computeLayout() {
         let dx = a.x - b.x
         let dy = a.y - b.y
         let dist = Math.hypot(dx, dy) || 1
-        const rep = 14000 / (dist * dist)
+        const rep = 26000 / (dist * dist)
         const fx = (dx / dist) * rep
         const fy = (dy / dist) * rep
         a.x += fx
@@ -81,7 +81,7 @@ function computeLayout() {
       let dx = b.x - a.x
       let dy = b.y - a.y
       let dist = Math.hypot(dx, dy) || 1
-      const att = (dist - 130) * 0.012
+      const att = (dist - 165) * 0.012
       const fx = (dx / dist) * att
       const fy = (dy / dist) * att
       a.x += fx
@@ -96,8 +96,8 @@ function computeLayout() {
     }
     // 边界
     for (const nd of ns) {
-      nd.x = Math.max(50, Math.min(WIDTH - 50, nd.x))
-      nd.y = Math.max(38, Math.min(HEIGHT - 30, nd.y))
+      nd.x = Math.max(66, Math.min(WIDTH - 66, nd.x))
+      nd.y = Math.max(48, Math.min(HEIGHT - 42, nd.y))
     }
   }
   nodes.value = ns
@@ -132,10 +132,14 @@ watch(() => [props.docs, props.links], computeLayout, { deep: true })
         />
       </g>
       <g v-for="nd in nodes" :key="nd.id" class="graph-node" @click="emit('select', nd.id)">
-        <circle :cx="nd.x" :cy="nd.y" r="9" :fill="catColor(nd.category)" stroke="var(--card)" stroke-width="2" />
-        <text :x="nd.x" :y="nd.y - 15" text-anchor="middle" class="graph-label">
-          {{ nd.title.length > 10 ? nd.title.slice(0, 10) + '…' : nd.title }}
+        <rect :x="nd.x - 58" :y="nd.y - 22" width="116" height="44" rx="7" class="node-body" />
+        <rect :x="nd.x - 58" :y="nd.y - 22" width="116" height="19" rx="7" :fill="catColor(nd.category)" />
+        <text :x="nd.x" :y="nd.y - 9" text-anchor="middle" class="node-title">
+          {{ nd.title.length > 9 ? nd.title.slice(0, 9) + '…' : nd.title }}
         </text>
+        <text :x="nd.x" :y="nd.y + 14" text-anchor="middle" class="node-sub">{{ nd.category }}</text>
+        <circle :cx="nd.x - 58" :cy="nd.y + 2" r="4" class="node-port" />
+        <circle :cx="nd.x + 58" :cy="nd.y + 2" r="4" class="node-port" />
       </g>
     </svg>
     <div class="graph-legend">

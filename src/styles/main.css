@@ -1,33 +1,33 @@
 /* ============ LGame 工作室 · Vue 版全站样式 ============ */
 
 :root {
-  --bg: #eef2fa;
-  --bg-soft: #e0e7f5;
+  --bg: #f0f1f4;
+  --bg-soft: #e6e8ec;
   --card: #ffffff;
-  --card-hover: #f4f8ff;
-  --border: #d2dcee;
-  --text: #0f1729;
-  --text-dim: #56688a;
-  --accent: #0a7cff;
-  --accent-2: #d6258f;
-  --danger: #e5484d;
-  --ok: #00a86b;
-  --radius: 14px;
+  --card-hover: #f7f8fa;
+  --border: #d8dbe0;
+  --text: #1f2329;
+  --text-dim: #646a73;
+  --accent: #2f7fd6;
+  --accent-2: #7c3aed;
+  --danger: #d93025;
+  --ok: #2e7d32;
+  --radius: 10px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 
 html.dark {
-  --bg: #05070d;
-  --bg-soft: #0a0f1a;
-  --card: #0d1320;
-  --card-hover: #131b2c;
-  --border: #1c2740;
-  --text: #e8f2ff;
-  --text-dim: #7688a8;
-  --accent: #00e5ff;
-  --accent-2: #ff2e88;
-  --danger: #ff3b6b;
-  --ok: #00ff9d;
+  --bg: #1a1a1a;
+  --bg-soft: #202020;
+  --card: #262626;
+  --card-hover: #2e2e2e;
+  --border: #3a3a3a;
+  --text: #e6e6e6;
+  --text-dim: #9a9a9a;
+  --accent: #4a9eff;
+  --accent-2: #a78bfa;
+  --danger: #ff6b6b;
+  --ok: #4ade80;
   color-scheme: dark;
 }
 
@@ -48,8 +48,8 @@ body {
 /* ---- 深色模式：星空背景 ---- */
 html.dark body {
   background:
-    radial-gradient(ellipse 120% 60% at 50% -10%, #16264a 0%, transparent 55%),
-    radial-gradient(ellipse 100% 50% at 50% 110%, #0d1830 0%, transparent 50%),
+    radial-gradient(ellipse 120% 60% at 50% -10%, #2c2c2c 0%, transparent 55%),
+    radial-gradient(ellipse 100% 50% at 50% 110%, #202020 0%, transparent 50%),
     var(--bg);
 }
 
@@ -745,6 +745,13 @@ html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
 .graph-node { cursor: pointer; }
 .graph-node:hover circle { stroke: var(--accent); stroke-width: 3; }
 .graph-label { fill: var(--text-dim); font-size: 12px; pointer-events: none; }
+
+/* ComfyUI 风格节点 */
+.node-body { fill: var(--card); stroke: var(--border); stroke-width: 1; transition: stroke 0.15s; }
+.graph-node:hover .node-body { stroke: var(--accent); stroke-width: 1.5; }
+.node-title { fill: #ffffff; font-size: 11px; font-weight: 600; pointer-events: none; }
+.node-sub { fill: var(--text-dim); font-size: 9px; pointer-events: none; }
+.node-port { fill: #7a7a7a; stroke: var(--card); stroke-width: 1.5; }
 .graph-legend { display: flex; gap: 16px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
 .graph-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
 .graph-legend i { width: 16px; height: 3px; border-radius: 2px; display: inline-block; }
@@ -769,7 +776,7 @@ html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
 :root {
   --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
   --shadow-hover: 0 16px 40px rgba(108, 92, 231, 0.18);
-  --grad-accent: linear-gradient(135deg, #00e5ff 0%, #7b5cff 50%, #ff2e88 100%);
+  --grad-accent: linear-gradient(135deg, #4a9eff 0%, #7c3aed 100%);
 }
 html.dark {
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
@@ -926,50 +933,29 @@ html.dark body::after {
 }
 .post-card:hover::before { opacity: 1; }
 
-/* ============ 赛博朋克游戏风 ============ */
+/* ============ ComfyUI 工具风 ============ */
 
-/* 深色下：扫描线 + 霓虹光斑背景 */
+/* 深色下：柔和光斑（无扫描线） */
 html.dark body::after {
   background:
-    repeating-linear-gradient(0deg, rgba(0, 229, 255, 0.035) 0 1px, transparent 1px 3px),
-    radial-gradient(600px 300px at 85% 12%, rgba(0, 229, 255, 0.12), transparent 60%),
-    radial-gradient(520px 260px at 8% 88%, rgba(255, 46, 136, 0.08), transparent 60%);
+    radial-gradient(600px 300px at 85% 12%, rgba(74, 158, 255, 0.06), transparent 60%),
+    radial-gradient(520px 260px at 8% 88%, rgba(124, 58, 237, 0.05), transparent 60%);
 }
 
-/* 霓虹发光标题 / 数字 */
-html.dark .page-head h1 { text-shadow: 0 0 24px rgba(0, 229, 255, 0.35); }
-html.dark .stat-num { filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.45)); }
-
-/* 卡片 hover 霓虹边框 */
+/* 卡片 hover：蓝色柔和边框 + 阴影 */
 html.dark .post-card:hover,
 html.dark .feature-card:hover,
 html.dark .stat-card:hover {
-  border-color: rgba(0, 229, 255, 0.6);
-  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.3), 0 16px 44px rgba(0, 229, 255, 0.16);
+  border-color: rgba(74, 158, 255, 0.5);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
-/* HUD 角标（项目卡片 / 策划图谱） */
-.project-card, .design-graph, .checkin-card { position: relative; }
-.project-card::before, .project-card::after,
-.design-graph::before, .design-graph::after {
-  content: '';
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border-color: var(--accent);
-  border-style: solid;
-  pointer-events: none;
-  opacity: 0.6;
-}
-.project-card::before, .design-graph::before { top: 7px; left: 7px; border-width: 2px 0 0 2px; }
-.project-card::after, .design-graph::after { bottom: 7px; right: 7px; border-width: 0 2px 2px 0; }
+/* 导航栏底部线 */
+html.dark .site-header { border-bottom-color: #3a3a3a; }
 
-/* 导航栏底部霓虹线 */
-html.dark .site-header { border-bottom-color: rgba(0, 229, 255, 0.25); }
-
-/* 主按钮霓虹发光（深色） */
+/* 主按钮轻微阴影（深色） */
 html.dark .n-button--primary-type:not(.n-button--disabled) {
-  box-shadow: 0 0 18px rgba(0, 229, 255, 0.45);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
 }
 @media (max-width: 720px) {
   .design-layout { flex-direction: column; }

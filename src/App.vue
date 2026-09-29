@@ -8,10 +8,10 @@ const theme = useThemeStore()
 const naiveTheme = computed(() => (theme.theme === 'dark' ? darkTheme : null))
 const themeOverrides = computed(() => ({
   common: {
-    primaryColor: theme.theme === 'dark' ? '#00e5ff' : '#0a7cff',
-    primaryColorHover: theme.theme === 'dark' ? '#4df0ff' : '#3a92ff',
-    primaryColorPressed: theme.theme === 'dark' ? '#00b8cc' : '#0a63d6',
-    primaryColorSuppl: theme.theme === 'dark' ? '#00e5ff' : '#0a7cff',
+    primaryColor: theme.theme === 'dark' ? '#4a9eff' : '#2f7fd6',
+    primaryColorHover: theme.theme === 'dark' ? '#6cb2ff' : '#4a92e0',
+    primaryColorPressed: theme.theme === 'dark' ? '#2f7fd6' : '#2668b0',
+    primaryColorSuppl: theme.theme === 'dark' ? '#4a9eff' : '#2f7fd6',
     borderRadius: '10px',
   },
 }))
