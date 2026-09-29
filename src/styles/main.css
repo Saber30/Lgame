@@ -1034,6 +1034,14 @@ html.dark .n-button--primary-type:not(.n-button--disabled) {
   pointer-events: none;
 }
 
+/* 像素小人层（桌宠，浮在内容之上） */
+.pet-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+
 .sidebar {
   position: fixed;
   left: 0;

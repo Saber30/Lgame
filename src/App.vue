@@ -4,6 +4,7 @@ import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme, zhCN, da
 import AppSidebar from './components/AppSidebar.vue'
 import AppTopbar from './components/AppTopbar.vue'
 import SakuraBackground from './components/SakuraBackground.vue'
+import PixelPet from './components/PixelPet.vue'
 import { useThemeStore } from './stores/theme'
 
 const theme = useThemeStore()
@@ -24,6 +25,7 @@ const themeOverrides = computed(() => ({
     <n-message-provider>
       <n-dialog-provider>
         <SakuraBackground />
+        <PixelPet />
         <div class="app-shell">
           <AppSidebar />
           <div class="app-main">
