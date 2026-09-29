@@ -14,6 +14,7 @@ const milestones = ref([])
 const users = ref([])
 const loading = ref(true)
 const error = ref('')
+const needLogin = ref(false)
 
 // 项目弹窗（新建/编辑共用）
 const showProject = ref(false)
@@ -52,11 +53,14 @@ function milestonesOf(projectId) {
 async function load() {
   loading.value = true
   error.value = ''
+  needLogin.value = false
   try {
     const [pd, md] = await Promise.all([api.get('/projects'), api.get('/milestones')])
     projects.value = pd.projects
     milestones.value = md.milestones
   } catch (e) {
+    // 没登录不算「加载失败」，否则访客会以为站点坏了
+    needLogin.value = e.status === 401
     error.value = e.message
   } finally {
     loading.value = false
@@ -286,6 +290,9 @@ onMounted(load)
   </div>
 
   <div v-if="loading" class="loading">加载中…</div>
+  <div v-else-if="needLogin" class="empty">
+    🔒 项目时间线需要登录后查看 · <router-link to="/login">去登录</router-link>
+  </div>
   <div v-else-if="error" class="empty">加载失败：{{ error }}</div>
   <div v-else>
     <div v-if="!projects.length" class="empty">还没有项目，管理员创建一个吧</div>

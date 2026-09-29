@@ -224,6 +224,12 @@ message.success('成功')
 dialog.warning({ title: '提示', content: '确定吗？', positiveText: '确定', negativeText: '取消', onPositiveClick: async () => { ... } })
 ```
 
+> ⚠️ **新增 Naive 组件必须去 `src/main.js` 注册。**
+> 为了控制包体积，项目没有全量 `app.use(naive)`（那样会注册 313 个组件），
+> 而是只注册了实际用到的那几个。要用新组件（比如 `n-tag`），
+> 先在 `src/main.js` 的 `NAIVE_COMPONENTS` 数组里加上它，
+> 否则模板里写了也不会渲染（生产构建不会报错，只会渲染成一个空的自定义标签）。
+
 ### Markdown 渲染
 
 帖子/日报正文，以及任何要渲染 Markdown 的地方：

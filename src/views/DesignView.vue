@@ -42,6 +42,7 @@ const selectedId = ref(null)
 const collapsed = ref(new Set())
 const loading = ref(true)
 const error = ref('')
+const needLogin = ref(false)
 
 const showEdit = ref(false)
 const editing = ref(null)
@@ -174,12 +175,15 @@ function selectDoc(id) {
 async function load() {
   loading.value = true
   error.value = ''
+  needLogin.value = false
   try {
     const data = await api.get('/design-docs')
     docs.value = data.docs
     if (!selectedId.value && docs.value.length) selectedId.value = docs.value[0].id
     await loadLinks()
   } catch (e) {
+    // 没登录不算「加载失败」，否则访客会以为站点坏了
+    needLogin.value = e.status === 401
     error.value = e.message
   } finally {
     loading.value = false
@@ -270,6 +274,9 @@ onMounted(load)
   </div>
 
   <div v-if="loading" class="loading">加载中…</div>
+  <div v-else-if="needLogin" class="empty">
+    🔒 策划案与知识图谱需要登录后查看 · <router-link to="/login">去登录</router-link>
+  </div>
   <div v-else-if="error" class="empty">加载失败：{{ error }}</div>
   <div v-else-if="viewMode === 'graph'" class="design-graph">
     <DesignGraph :docs="docs" :links="links" @select="onGraphSelect" />
