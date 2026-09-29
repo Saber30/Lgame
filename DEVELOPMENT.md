@@ -139,6 +139,21 @@ npm run dev
 
 **改表流程**：在 `schema.sql` 里用 `CREATE TABLE IF NOT EXISTS` 或 `ALTER TABLE` 加新表/新列 → push 代码 → 去 Cloudflare 控制台 D1 的 Console 里手动执行对应的 SQL（`CREATE TABLE IF NOT EXISTS` 是幂等的，可反复执行）。
 
+#### 日报的「归属日」约定
+
+日报的 `posts.meta` 里存 `{ done, plan, issues, day? }`：`day` 是**归属日**（YYYY-MM-DD），
+提交时可以指定往期日期来补交；不指定就按提交时间换算成北京时间。
+
+凡是判断「这篇日报算哪天的」，**统一用同一个表达式**（见 `worker/api.js` 的 `DAILY_DAY_SQL`）：
+
+```sql
+COALESCE(json_extract(p.meta, '$.day'), date(p.created_at, '+8 hours'))
+```
+
+打卡统计、日期筛选、月度总览都用它，口径必须一致。这个坑已经踩过一次：
+原来标题用 UTC 生成、打卡用北京时间，结果凌晨提交的日报标题写成前一天。
+前端对应的是 `src/utils/format.js` 里的 `beijingDayKey` / `todayBeijing`。
+
 ### KV 存储（文件）
 
 绑定名 `FILES`（见 `wrangler.toml`）。文件以「随机 id → 二进制内容 + metadata{文件名/类型/大小}」存储。新增文件存储直接复用 `/api/files` 接口即可，无需改表。

@@ -58,33 +58,40 @@ for (const c of cases) {
   }
 }
 
-// 日报按日期筛选（北京时间口径）
+// 日报按日期筛选（归属日口径：meta.day 优先，否则按北京时间从 created_at 换算）
 try {
   const d = await getJson(`${BASE}?category=daily&pageSize=50`)
-  const day = (d.posts?.[0]?.created_at || '').slice(0, 10)
+  const dayOf = (p) => {
+    let meta = {}
+    try {
+      meta = typeof p.meta === 'string' ? JSON.parse(p.meta) : p.meta || {}
+    } catch {}
+    if (/^\d{4}-\d{2}-\d{2}$/.test(meta.day || '')) return meta.day
+    return new Date(new Date(p.created_at.replace(' ', 'T') + 'Z').getTime() + 8 * 3600e3).toISOString().slice(0, 10)
+  }
+  const day = dayOf(d.posts?.[0] || {})
   if (!day) throw new Error('没有日报数据，跳过')
   const onDay = await getJson(`${BASE}?category=daily&pageSize=50&date=${day}`)
-  const all = d.posts.filter((p) => {
-    const t = new Date(new Date(p.created_at.replace(' ', 'T') + 'Z').getTime() + 8 * 3600e3)
-    return t.toISOString().slice(0, 10) === day
-  }).length
-  const ok = onDay.total === all
+  const expect = d.posts.filter((p) => dayOf(p) === day).length
+  const ok = onDay.total === expect && onDay.posts.every((p) => dayOf(p) === day)
   if (!ok) failed++
-  console.log(`${ok ? '  PASS' : '  FAIL'}  ${'日报按日期筛选'.padEnd(24)} ${day} 应有 ${all} 篇，接口返回 ${onDay.total} 篇`)
+  console.log(`${ok ? '  PASS' : '  FAIL'}  ${'日报按日期筛选'.padEnd(24)} ${day} 应有 ${expect} 篇，接口返回 ${onDay.total} 篇`)
 } catch (e) {
   failed++
   console.log(`  FAIL  ${'日报按日期筛选'.padEnd(24)} ${e.message}`)
 }
 
-// 成员名单需要登录
-try {
-  const res = await fetch('https://xianyu.lgame.men/api/members', { signal: AbortSignal.timeout(30000) })
-  const ok = res.status === 401
-  if (!ok) failed++
-  console.log(`${ok ? '  PASS' : '  FAIL'}  ${'成员名单需登录'.padEnd(24)} 未登录返回 ${res.status}（期望 401）`)
-} catch (e) {
-  failed++
-  console.log(`  FAIL  ${'成员名单需登录'.padEnd(24)} ${e.message}`)
+// 需要登录的接口
+for (const [path, label] of [['/api/members', '成员名单需登录'], ['/api/daily-overview', '月度总览需登录'], ['/api/daily-checkin', '打卡统计需登录']]) {
+  try {
+    const res = await fetch('https://xianyu.lgame.men' + path, { signal: AbortSignal.timeout(30000) })
+    const ok = res.status === 401
+    if (!ok) failed++
+    console.log(`${ok ? '  PASS' : '  FAIL'}  ${label.padEnd(24)} 未登录返回 ${res.status}（期望 401）`)
+  } catch (e) {
+    failed++
+    console.log(`  FAIL  ${label.padEnd(24)} ${e.message}`)
+  }
 }
 
 console.log(failed === 0 ? '\n线上接口全部正常 ✅\n' : `\n有 ${failed} 项异常 ❌\n`)
