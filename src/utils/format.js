@@ -42,3 +42,18 @@ export function parseDailyMeta(meta) {
     return {}
   }
 }
+
+/** 按北京时间取日期分组键（YYYY-MM-DD），和打卡统计口径一致 */
+export function beijingDayKey(sqliteTime) {
+  const d = parseTime(sqliteTime)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Date(d.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
+/** 把 YYYY-MM-DD 显示成「9月22日 周一」 */
+export function fmtDayLabel(key) {
+  const [y, m, d] = String(key).split('-').map(Number)
+  if (!y || !m || !d) return key
+  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
+  return `${m}月${d}日 ${week}`
+}

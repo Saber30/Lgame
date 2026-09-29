@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node scripts/test-pacman.mjs && node --no-warnings --experimental-sqlite scripts/test-search-sql.mjs"
+    "test": "node scripts/test-pacman.mjs && node --no-warnings --experimental-sqlite scripts/test-list-filters.mjs"
   },
   "dependencies": {
     "dompurify": "^3.4.14",

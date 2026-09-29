@@ -197,6 +197,11 @@ async function handleListPosts(url, env, request) {
 
   // 搜索关键词：限制长度，并转义 LIKE 通配符（否则用户输入 % 会变成全表匹配）
   const keyword = (url.searchParams.get('q') || '').trim().slice(0, 50);
+  // 按作者筛选
+  const author = parseInt(url.searchParams.get('author') || '', 10);
+  // 按日期筛选（北京时间，和打卡统计口径一致）
+  const day = (url.searchParams.get('date') || '').trim();
+  if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) fail('日期格式不正确');
 
   let where = category ? "WHERE p.category = ? AND p.status = 'approved'" : "WHERE p.status = 'approved'";
   const args = category ? [category] : [];
@@ -206,8 +211,16 @@ async function handleListPosts(url, env, request) {
   }
   if (keyword) {
     const like = '%' + keyword.replace(/[\\%_]/g, (ch) => '\\' + ch) + '%';
-    where += " AND (p.title LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')";
-    args.push(like, like);
+    where += " AND (p.title LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\' OR p.meta LIKE ? ESCAPE '\\')";
+    args.push(like, like, like);
+  }
+  if (Number.isInteger(author) && author > 0) {
+    where += ' AND p.user_id = ?';
+    args.push(author);
+  }
+  if (day) {
+    where += " AND date(p.created_at, '+8 hours') = ?";
+    args.push(day);
   }
 
   const { results } = await env.DB.prepare(
@@ -246,10 +259,7 @@ async function handleCreatePost(request, env) {
     const plan = String(body.plan || '').trim();
     const issues = String(body.issues || '').trim();
     if (!done && !plan && !issues) fail('日报内容不能为空');
-    if (!title) {
-      const now = new Date();
-      title = `${now.getUTCMonth() + 1}月${now.getUTCDate()}日 日报`;
-    }
+    if (!title) title = dailyTitle();
     meta = JSON.stringify({ done, plan, issues });
   } else {
     if (!title) fail('标题不能为空');
@@ -336,10 +346,7 @@ async function handleUpdatePost(request, env, id) {
     const issues = String(body.issues || '').trim();
     if (!done && !plan && !issues) fail('日报内容不能为空');
     title = String(body.title || '').trim();
-    if (!title) {
-      const now = new Date();
-      title = `${now.getUTCMonth() + 1}月${now.getUTCDate()}日 日报`;
-    }
+    if (!title) title = dailyTitle();
     meta = JSON.stringify({ done, plan, issues });
   } else {
     title = String(body.title || '').trim();
@@ -420,6 +427,16 @@ async function handleListUsers(request, env) {
       ORDER BY u.id ASC`
   ).all();
   return json({ users: results });
+}
+
+/**
+ * 成员名单（只要 id + 用户名，登录后可见）。
+ * 给日报这类栏目做「按成员筛选」用，不下发邮箱等敏感字段。
+ */
+async function handleListMembers(request, env) {
+  await requireUser(request, env);
+  const { results } = await env.DB.prepare('SELECT id, username FROM users ORDER BY id ASC').all();
+  return json({ members: results });
 }
 
 async function handleUpdateUser(request, env, id) {
@@ -832,6 +849,16 @@ async function handleStats(request, env) {
 // ---------------- 路由分发 ----------------
 // 按路径分发：/api/posts/3/comments -> ['posts', '3', 'comments']
 
+/**
+ * 日报的默认标题，按北京时间取日期。
+ * 必须和打卡统计（date(created_at, '+8 hours')）口径一致，
+ * 否则凌晨 0~8 点提交的日报，标题会写成前一天。
+ */
+export function dailyTitle(now = Date.now()) {
+  const d = new Date(now + 8 * 3600 * 1000);
+  return `${d.getUTCMonth() + 1}月${d.getUTCDate()}日 日报`;
+}
+
 export async function handleApi(request, env) {
   const method = request.method;
   const url = new URL(request.url);
@@ -848,6 +875,7 @@ export async function handleApi(request, env) {
       }
       if (seg[0] === 'stats' && method === 'GET') return await handleStats(request, env);
       if (seg[0] === 'daily-checkin' && method === 'GET') return await handleDailyCheckin(request, env);
+      if (seg[0] === 'members' && method === 'GET') return await handleListMembers(request, env);
       if (seg[0] === 'reports' && method === 'GET') return await handleReports(request, env);
       if (seg[0] === 'posts') {
         if (method === 'GET') return await handleListPosts(url, env, request);
