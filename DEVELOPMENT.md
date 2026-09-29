@@ -49,16 +49,20 @@ lgame/
 ├── schema.sql               # 数据库表结构（建表/迁移用）
 ├── src/                     # 前端源码
 │   ├── main.js              # 入口：挂载 Vue + Naive UI + Pinia + Router
-│   ├── App.vue              # 根组件（providers + 导航 + 路由出口）
+│   ├── App.vue              # 根组件（providers + 侧栏/顶栏 + 路由出口）
 │   ├── router/index.js      # 路由表 + 登录守卫
 │   ├── stores/              # Pinia：auth.js（登录态）、theme.js（主题）
 │   ├── api/index.js         # fetch 封装 + uploadFile
 │   ├── utils/               # format.js（时间/分类）、markdown.js（渲染）
+│   ├── game/pacman.js       # 吃豆人纯逻辑（无 DOM 依赖，可无头测试）
 │   ├── components/          # 可复用组件
-│   │   ├── SiteHeader.vue   # 导航栏
-│   │   ├── PostCard.vue     # 帖子卡片
-│   │   ├── PostComposer.vue # 发帖表单
-│   │   ├── CommentSection.vue
+│   │   ├── AppSidebar.vue   # 左侧菜单栏
+│   │   ├── AppTopbar.vue    # 顶栏（页面标题 + 主题切换）
+│   │   ├── SakuraBackground.vue  # 樱花 + 萤火虫动态背景
+│   │   ├── PixelPet.vue     # 像素桌宠
+│   │   ├── PacMan.vue       # 吃豆人（画布渲染 + 键盘输入）
+│   │   ├── DesignGraph.vue  # 知识图谱（力导向 SVG）
+│   │   ├── PostCard.vue / PostComposer.vue / CommentSection.vue
 │   │   ├── PaginationBar.vue
 │   │   └── FileUploadButton.vue  # 附件上传按钮
 │   ├── views/               # 页面
@@ -69,13 +73,26 @@ lgame/
 │   │   ├── PostView（帖子详情 + 点赞 + 编辑）
 │   │   ├── AdminView（管理后台：统计/成员/排行）
 │   │   ├── ReportView（周报/月报汇总）
-│   │   └── TimelineView（时间线/里程碑）
+│   │   ├── TimelineView（时间线/里程碑）
+│   │   ├── DesignView（策划案 + 知识图谱）
+│   │   └── GameView（小游戏）
 │   └── styles/main.css      # 全站样式 + 深色/浅色主题变量
+├── scripts/                 # 开发/测试脚本
+│   └── test-pacman.mjs      # 吃豆人逻辑的无头测试（npm test）
 └── worker/                  # 后端源码
     ├── index.js             # Worker 入口：路由分发 + SPA 回退 + Cron
     ├── api.js               # 业务 API（约 700 行）
     └── news.js              # RSS 抓取 + Qwen 翻译
 ```
+
+### 跑测试
+
+```bash
+npm test        # 吃豆人逻辑：幽灵追击、过关循环、被抓住重开
+```
+
+游戏逻辑集中在 `src/game/pacman.js`，与渲染解耦，所以能直接在 Node 里跑完整对局，
+不需要开浏览器。改完幽灵 AI 或关卡规则后先跑一遍再提交。
 
 ## 3. 环境搭建（本地开发）
 
@@ -175,7 +192,8 @@ export async function handleApi(request, env) {
 
    如果是管理员专属，加 `meta: { requiresAdmin: true }`（守卫在 `router/index.js` 里自动跳转）。
 
-3. 在 `src/components/SiteHeader.vue` 的导航里加 `<router-link to="/xxx">`（如需要导航入口）。
+3. 在 `src/components/AppSidebar.vue` 的 `MENU` 数组里加一项（`path` / `label` / `icon`），
+   再到 `src/components/AppTopbar.vue` 的 `TITLES` 里补上该路径对应的页面标题。
 
 ### 调后端接口
 
