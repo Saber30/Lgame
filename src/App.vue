@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme, zhCN, dateZhCN } from 'naive-ui'
 import AppSidebar from './components/AppSidebar.vue'
 import AppTopbar from './components/AppTopbar.vue'
-import ParticleBackground from './components/ParticleBackground.vue'
+import SakuraBackground from './components/SakuraBackground.vue'
 import { useThemeStore } from './stores/theme'
 
 const theme = useThemeStore()
@@ -23,7 +23,7 @@ const themeOverrides = computed(() => ({
   <n-config-provider :theme="naiveTheme" :theme-overrides="themeOverrides" :locale="zhCN" :date-locale="dateZhCN">
     <n-message-provider>
       <n-dialog-provider>
-        <ParticleBackground />
+        <SakuraBackground />
         <div class="app-shell">
           <AppSidebar />
           <div class="app-main">
