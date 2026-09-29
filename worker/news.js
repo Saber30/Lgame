@@ -90,25 +90,42 @@ function parseRss(xml) {
 
 // 从一条 RSS item 里提取第一张图片 URL（enclosure / media / description 里的 img）
 function extractImage(block) {
-  let m = block.match(/<enclosure[^>]*>/i);
+  let raw = null
+  let m = block.match(/<enclosure[^>]*>/i)
   if (m) {
-    const url = m[0].match(/url=["']([^"']+)["']/i);
-    const type = m[0].match(/type=["']([^"']+)["']/i);
-    if (url && type && /^image\//i.test(type[1])) return decodeEntities(url[1]);
+    const url = m[0].match(/url=["']([^"']+)["']/i)
+    const type = m[0].match(/type=["']([^"']+)["']/i)
+    if (url && type && /^image\//i.test(type[1])) raw = url[1]
   }
-  m = block.match(/<media:(?:content|thumbnail)[^>]*url=["']([^"']+)["']/i);
-  if (m) return decodeEntities(m[1]);
-  m = block.match(/<description[\s\S]*?<\/description>/i);
-  if (m) {
-    const img = m[0].match(/<img[^>]+src=["']([^"']+)["']/i);
-    if (img) return decodeEntities(img[1]);
+  if (!raw) {
+    m = block.match(/<media:(?:content|thumbnail)[^>]*url=["']([^"']+)["']/i)
+    if (m) raw = m[1]
   }
-  m = block.match(/<content:encoded[\s\S]*?<\/content:encoded>/i);
-  if (m) {
-    const img = m[0].match(/<img[^>]+src=["']([^"']+)["']/i);
-    if (img) return decodeEntities(img[1]);
+  if (!raw) {
+    m = block.match(/<description[\s\S]*?<\/description>/i)
+    if (m) {
+      const img = m[0].match(/<img[^>]+src=["']([^"']+)["']/i)
+      if (img) raw = img[1]
+    }
   }
-  return null;
+  if (!raw) {
+    m = block.match(/<content:encoded[\s\S]*?<\/content:encoded>/i)
+    if (m) {
+      const img = m[0].match(/<img[^>]+src=["']([^"']+)["']/i)
+      if (img) raw = img[1]
+    }
+  }
+  if (!raw) return null
+  const url = decodeEntities(raw)
+  // 跳过防盗链严格 / 封服务器 IP 的图源（图片加载不出来，存了也是裂图）
+  const BLOCKED = ['gematsu.com']
+  try {
+    const host = new URL(url).hostname
+    if (BLOCKED.some((b) => host.includes(b))) return null
+  } catch {
+    return null
+  }
+  return url
 }
 
 function field(block, name) {
