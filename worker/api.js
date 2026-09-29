@@ -219,7 +219,7 @@ async function handleListPosts(url, env, request) {
     args.push(author);
   }
   if (day) {
-    where += " AND date(p.created_at, '+8 hours') = ?";
+    where += ` AND ${DAILY_DAY_SQL} = ?`;
     args.push(day);
   }
 
@@ -259,8 +259,11 @@ async function handleCreatePost(request, env) {
     const plan = String(body.plan || '').trim();
     const issues = String(body.issues || '').trim();
     if (!done && !plan && !issues) fail('日报内容不能为空');
-    if (!title) title = dailyTitle();
-    meta = JSON.stringify({ done, plan, issues });
+    // 归属日：默认今天（北京时间），也可以指定往期日期来补交
+    const day = String(body.day || '').trim();
+    if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) fail('日期格式不正确');
+    if (!title) title = dailyTitle(day);
+    meta = JSON.stringify(day ? { done, plan, issues, day } : { done, plan, issues });
   } else {
     if (!title) fail('标题不能为空');
     if (!content) fail('内容不能为空');
@@ -330,7 +333,7 @@ async function handleDeletePost(env, request, id) {
 
 async function handleUpdatePost(request, env, id) {
   const user = await requireUser(request, env);
-  const post = await env.DB.prepare('SELECT id, user_id, category FROM posts WHERE id = ?').bind(id).first();
+  const post = await env.DB.prepare('SELECT id, user_id, category, meta FROM posts WHERE id = ?').bind(id).first();
   if (!post) fail('帖子不存在', 404);
   if (user.id !== post.user_id && user.role !== 'admin') fail('没有权限编辑这篇帖子', 403);
 
@@ -346,8 +349,17 @@ async function handleUpdatePost(request, env, id) {
     const issues = String(body.issues || '').trim();
     if (!done && !plan && !issues) fail('日报内容不能为空');
     title = String(body.title || '').trim();
-    if (!title) title = dailyTitle();
-    meta = JSON.stringify({ done, plan, issues });
+    // 归属日：客户端可以改，没传就保留原来的（否则编辑一下就把补交日期弄丢了）
+    let existingDay = '';
+    try {
+      existingDay = JSON.parse(post.meta || '{}').day || '';
+    } catch {
+      existingDay = '';
+    }
+    const day = String(body.day || existingDay || '').trim();
+    if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) fail('日期格式不正确');
+    if (!title) title = dailyTitle(day);
+    meta = JSON.stringify(day ? { done, plan, issues, day } : { done, plan, issues });
   } else {
     title = String(body.title || '').trim();
     content = String(body.content || '').trim();
@@ -493,27 +505,56 @@ async function handleResetPassword(request, env, id) {
 
 async function handleDailyCheckin(request, env) {
   await requireUser(request, env);
+  const today = beijingDay();
   const doneQuery = await env.DB.prepare(
     `SELECT u.id, u.username
        FROM users u
       WHERE EXISTS (
         SELECT 1 FROM posts p
-         WHERE p.user_id = u.id AND p.category = 'daily'
-           AND date(p.created_at, '+8 hours') = date('now', '+8 hours')
+         WHERE p.user_id = u.id AND p.category = 'daily' AND p.status = 'approved'
+           AND ${DAILY_DAY_SQL} = ?
       )
       ORDER BY u.id ASC`
-  ).all();
+  )
+    .bind(today)
+    .all();
   const missingQuery = await env.DB.prepare(
     `SELECT u.id, u.username
        FROM users u
       WHERE NOT EXISTS (
         SELECT 1 FROM posts p
-         WHERE p.user_id = u.id AND p.category = 'daily'
-           AND date(p.created_at, '+8 hours') = date('now', '+8 hours')
+         WHERE p.user_id = u.id AND p.category = 'daily' AND p.status = 'approved'
+           AND ${DAILY_DAY_SQL} = ?
       )
       ORDER BY u.id ASC`
-  ).all();
-  return json({ done: doneQuery.results, missing: missingQuery.results });
+  )
+    .bind(today)
+    .all();
+  return json({ day: today, done: doneQuery.results, missing: missingQuery.results });
+}
+
+/**
+ * 某个月的日报提交总览：谁在哪几天交了，给「谁按时交了」这个督办问题用。
+ */
+async function handleDailyOverview(request, env) {
+  await requireUser(request, env);
+  const url = new URL(request.url);
+  const month = (url.searchParams.get('month') || '').trim() || beijingDay().slice(0, 7);
+  if (!/^\d{4}-\d{2}$/.test(month)) fail('月份格式不正确');
+
+  const { results } = await env.DB.prepare(
+    `SELECT p.user_id, ${DAILY_DAY_SQL} AS day
+       FROM posts p
+      WHERE p.category = 'daily' AND p.status = 'approved'
+        AND ${DAILY_DAY_SQL} LIKE ?
+      GROUP BY p.user_id, day
+      ORDER BY day ASC`
+  )
+    .bind(month + '%')
+    .all();
+  const users = await env.DB.prepare('SELECT id, username FROM users ORDER BY id ASC').all();
+
+  return json({ month, members: users.results, entries: results });
 }
 
 async function handleReports(request, env) {
@@ -849,15 +890,27 @@ async function handleStats(request, env) {
 // ---------------- 路由分发 ----------------
 // 按路径分发：/api/posts/3/comments -> ['posts', '3', 'comments']
 
-/**
- * 日报的默认标题，按北京时间取日期。
- * 必须和打卡统计（date(created_at, '+8 hours')）口径一致，
- * 否则凌晨 0~8 点提交的日报，标题会写成前一天。
- */
-export function dailyTitle(now = Date.now()) {
-  const d = new Date(now + 8 * 3600 * 1000);
-  return `${d.getUTCMonth() + 1}月${d.getUTCDate()}日 日报`;
+/** 北京时间下的日期键（YYYY-MM-DD） */
+export function beijingDay(now = Date.now()) {
+  return new Date(now + 8 * 3600 * 1000).toISOString().slice(0, 10);
 }
+
+/**
+ * 日报的默认标题。
+ * 传了归属日就用归属日（补交往期日报），否则按当前北京时间。
+ * 必须和打卡统计口径一致，否则凌晨 0~8 点提交的日报标题会写成前一天。
+ */
+export function dailyTitle(day) {
+  const key = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? day : beijingDay();
+  const [, month, date] = key.split('-').map(Number);
+  return `${month}月${date}日 日报`;
+}
+
+/**
+ * 日报归属日：优先用 meta.day（补交时指定），否则按提交时间换算北京时间。
+ * 打卡统计、日期筛选、月度总览都用这一个口径。
+ */
+const DAILY_DAY_SQL = "COALESCE(json_extract(p.meta, '$.day'), date(p.created_at, '+8 hours'))";
 
 export async function handleApi(request, env) {
   const method = request.method;
@@ -875,6 +928,7 @@ export async function handleApi(request, env) {
       }
       if (seg[0] === 'stats' && method === 'GET') return await handleStats(request, env);
       if (seg[0] === 'daily-checkin' && method === 'GET') return await handleDailyCheckin(request, env);
+      if (seg[0] === 'daily-overview' && method === 'GET') return await handleDailyOverview(request, env);
       if (seg[0] === 'members' && method === 'GET') return await handleListMembers(request, env);
       if (seg[0] === 'reports' && method === 'GET') return await handleReports(request, env);
       if (seg[0] === 'posts') {

@@ -50,6 +50,11 @@ export function beijingDayKey(sqliteTime) {
   return new Date(d.getTime() + 8 * 3600 * 1000).toISOString().slice(0, 10)
 }
 
+/** 今天的北京时间日期（YYYY-MM-DD） */
+export function todayBeijing() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
 /** 把 YYYY-MM-DD 显示成「9月22日 周一」 */
 export function fmtDayLabel(key) {
   const [y, m, d] = String(key).split('-').map(Number)

@@ -623,6 +623,50 @@ html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
   font-size: 13px;
 }
 .daily-group-day { font-weight: 600; color: var(--text); font-size: 15px; }
+
+/* ---- 日报：提交总览（成员 × 日期）---- */
+.daily-overview {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 22px;
+}
+.daily-overview-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.daily-overview-head h2 { font-size: 16px; }
+.daily-overview-tip { font-size: 12px; margin: 6px 0 12px; }
+.daily-month-nav { display: flex; align-items: center; gap: 8px; }
+.daily-month-nav button {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.daily-month-nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+.daily-month-label { font-size: 13px; color: var(--text-dim); }
+.daily-grid-wrap { overflow-x: auto; padding-bottom: 4px; }
+.daily-grid { border-collapse: collapse; font-size: 12px; }
+.daily-grid th, .daily-grid td { width: 20px; min-width: 20px; padding: 3px 0; text-align: center; }
+.daily-grid th { color: var(--text-dim); font-weight: 500; font-size: 11px; }
+.daily-grid .daily-grid-name {
+  width: auto;
+  min-width: 76px;
+  padding-right: 12px;
+  text-align: left;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.daily-grid .daily-grid-total { width: auto; min-width: 52px; padding-left: 10px; color: var(--text-dim); white-space: nowrap; }
+.daily-grid td.is-weekend { background: var(--bg-soft); }
+.daily-grid th.is-weekend { opacity: 0.6; }
+.daily-grid .is-today { box-shadow: inset 0 0 0 1px var(--accent); border-radius: 4px; }
+.daily-grid td.is-future { opacity: 0.4; }
+.daily-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
 .checkin-card h2 { font-size: 16px; margin-bottom: 12px; }
 .checkin-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
 .checkin-tag { font-size: 13px; font-weight: 600; white-space: nowrap; }

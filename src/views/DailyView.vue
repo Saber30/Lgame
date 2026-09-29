@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { api } from '../api'
 import { useAuthStore } from '../stores/auth'
-import { beijingDayKey, fmtDayLabel } from '../utils/format'
+import { beijingDayKey, fmtDayLabel, todayBeijing } from '../utils/format'
 import PostCard from '../components/PostCard.vue'
 import PaginationBar from '../components/PaginationBar.vue'
 import FileUploadButton from '../components/FileUploadButton.vue'
@@ -27,11 +27,36 @@ const keyword = ref('')
 const authorId = ref(null)
 const day = ref('')
 
-const form = reactive({ title: '', done: '', plan: '', issues: '', cover: '' })
+// 本月提交总览
+const today = todayBeijing()
+const overviewMonth = ref(today.slice(0, 7))
+const overview = ref({ members: [], entries: [] })
+
+const form = reactive({ title: '', day: today, done: '', plan: '', issues: '', cover: '' })
 const submitting = ref(false)
 
 const hasFilter = computed(() => !!keyword.value || !!authorId.value || !!day.value)
 const memberOptions = computed(() => members.value.map((m) => ({ label: m.username, value: m.id })))
+const isThisMonth = computed(() => overviewMonth.value >= today.slice(0, 7))
+
+/** 总览表格：成员 × 当月每一天 */
+const overviewGrid = computed(() => {
+  const [y, m] = overviewMonth.value.split('-').map(Number)
+  if (!y || !m) return { days: [], rows: [] }
+  const dayCount = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  const done = new Set(overview.value.entries.map((e) => `${e.user_id}:${e.day}`))
+  const days = Array.from({ length: dayCount }, (_, i) => {
+    const d = i + 1
+    const key = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+    return { d, key, weekend: dow === 0 || dow === 6, future: key > today, isToday: key === today }
+  })
+  const rows = overview.value.members.map((mem) => {
+    const cells = days.map((d) => done.has(`${mem.id}:${d.key}`))
+    return { id: mem.id, name: mem.username, cells, count: cells.filter(Boolean).length }
+  })
+  return { days, rows }
+})
 
 /** 我今天交了没（打卡接口只统计今天） */
 const myToday = computed(() => {
@@ -89,6 +114,22 @@ async function loadMembers() {
   }
 }
 
+async function loadOverview() {
+  if (!auth.isLoggedIn) return
+  try {
+    overview.value = await api.get('/daily-overview?month=' + overviewMonth.value)
+  } catch {
+    overview.value = { members: [], entries: [] }
+  }
+}
+
+function shiftMonth(step) {
+  const [y, m] = overviewMonth.value.split('-').map(Number)
+  const d = new Date(Date.UTC(y, m - 1 + step, 1))
+  overviewMonth.value = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+  loadOverview()
+}
+
 /** 改了筛选条件就回到第 1 页重新查 */
 function applyFilter() {
   page.value = 1
@@ -131,6 +172,7 @@ async function submit() {
     const data = await api.post('/posts', {
       category: 'daily',
       title: form.title,
+      day: form.day,
       done: form.done,
       plan: form.plan,
       issues: form.issues,
@@ -188,6 +230,7 @@ onMounted(() => {
   load()
   loadCheckin()
   loadMembers()
+  loadOverview()
 })
 </script>
 
@@ -222,12 +265,65 @@ onMounted(() => {
     </div>
   </section>
 
+  <section v-if="auth.isLoggedIn && overviewGrid.rows.length" class="daily-overview">
+    <div class="daily-overview-head">
+      <h2>📊 提交总览</h2>
+      <div class="daily-month-nav">
+        <button @click="shiftMonth(-1)">‹ 上月</button>
+        <span class="daily-month-label">{{ overviewMonth }}</span>
+        <button :disabled="isThisMonth" @click="shiftMonth(1)">下月 ›</button>
+      </div>
+    </div>
+    <p class="text-dim daily-overview-tip">实心点 = 当天交了日报，周末浅色显示，点月份可切换</p>
+    <div class="daily-grid-wrap">
+      <table class="daily-grid">
+        <thead>
+          <tr>
+            <th class="daily-grid-name">成员</th>
+            <th
+              v-for="d in overviewGrid.days"
+              :key="d.d"
+              :class="{ 'is-weekend': d.weekend, 'is-today': d.isToday, 'is-future': d.future }"
+            >
+              {{ d.d }}
+            </th>
+            <th class="daily-grid-total">合计</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in overviewGrid.rows" :key="row.id">
+            <td class="daily-grid-name">{{ row.name }}</td>
+            <td
+              v-for="(cell, i) in row.cells"
+              :key="i"
+              :class="{
+                'is-done': cell,
+                'is-weekend': overviewGrid.days[i].weekend,
+                'is-today': overviewGrid.days[i].isToday,
+                'is-future': overviewGrid.days[i].future,
+              }"
+            >
+              <span v-if="cell" class="daily-dot" />
+            </td>
+            <td class="daily-grid-total">{{ row.count }} 天</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <section v-if="auth.isLoggedIn" id="daily-compose" class="compose-card">
-    <h2>📅 提交今日日报</h2>
+    <h2>📅 提交日报</h2>
     <n-form label-placement="top">
       <p class="text-dim" style="margin-bottom: 6px">✍️ 三段内容都支持 Markdown 排版：<code># 标题</code>、<code>- 列表</code>、<code>**加粗**</code>、代码块、链接等</p>
+      <n-form-item label="归属日期">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+          <input v-model="form.day" type="date" class="daily-date" />
+          <span class="text-dim" style="font-size: 12px">默认今天；忘了写也可以改成往期日期补交</span>
+        </div>
+      </n-form-item>
       <n-form-item label="标题">
-        <n-input v-model:value="form.title" maxlength="100" placeholder="标题（可留空，自动按日期生成）" />
+        <n-input v-model:value="form.title" maxlength="100" placeholder="标题（可留空，自动按归属日期生成）" />
       </n-form-item>
       <n-form-item label="头图（可选）">
         <div style="display: flex; align-items: center; gap: 12px">
