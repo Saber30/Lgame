@@ -206,6 +206,11 @@ function onContentDblClick(e) {
   dl.click()
 }
 
+function onImgError(e) {
+  const box = e.target.closest('.post-cover')
+  if (box) box.style.display = 'none'
+}
+
 onMounted(load)
 </script>
 
@@ -218,7 +223,7 @@ onMounted(load)
 
     <article class="post-detail" @click="onContentClick" @dblclick="onContentDblClick">
       <div v-if="post.cover" class="post-cover">
-        <img :src="post.cover" alt="" />
+        <img :src="post.cover" alt="" referrerpolicy="no-referrer" @error="onImgError" />
       </div>
       <div class="post-meta">
         <span class="badge" :class="'badge-' + post.category">{{ categoryLabel(post.category) }}</span>

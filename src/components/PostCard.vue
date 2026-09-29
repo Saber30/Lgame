@@ -24,12 +24,17 @@ const sourceMeta = computed(() => {
 })
 
 const region = computed(() => sourceMeta.value.region || '')
+
+function onImgError(e) {
+  const box = e.target.closest('.post-card-thumb')
+  if (box) box.style.display = 'none'
+}
 </script>
 
 <template>
   <article class="post-card" :class="{ 'post-card-cover': post.cover }" @click="router.push('/post/' + post.id)">
     <div v-if="post.cover" class="post-card-thumb">
-      <img :src="post.cover" alt="" loading="lazy" />
+      <img :src="post.cover" alt="" loading="lazy" referrerpolicy="no-referrer" @error="onImgError" />
     </div>
     <div class="post-card-body">
       <div class="post-meta">
