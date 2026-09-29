@@ -97,7 +97,7 @@ npm test        # 吃豆人逻辑 + 搜索 SQL 与转义（用本地 SQLite，�
 搜索接口改完后，可以再跑一次线上冒烟检查（会真的请求线上接口）：
 
 ```bash
-node scripts/check-search-live.mjs
+node scripts/check-api-live.mjs
 ```
 
 ## 3. 环境搭建（本地开发）
