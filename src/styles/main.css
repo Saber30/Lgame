@@ -1,33 +1,33 @@
 /* ============ LGame 工作室 · Vue 版全站样式 ============ */
 
 :root {
-  --bg: #f0f1f4;
-  --bg-soft: #e6e8ec;
+  --bg: #ffffff;
+  --bg-soft: #fafafa;
   --card: #ffffff;
-  --card-hover: #f7f8fa;
-  --border: #d8dbe0;
-  --text: #1f2329;
-  --text-dim: #646a73;
-  --accent: #2f7fd6;
-  --accent-2: #7c3aed;
-  --danger: #d93025;
-  --ok: #2e7d32;
-  --radius: 10px;
+  --card-hover: #fafafa;
+  --border: #eaeaea;
+  --text: #000000;
+  --text-dim: #666666;
+  --accent: #000000;
+  --accent-2: #555555;
+  --danger: #e5484d;
+  --ok: #0cce6b;
+  --radius: 8px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 
 html.dark {
-  --bg: #1a1a1a;
-  --bg-soft: #202020;
-  --card: #262626;
-  --card-hover: #2e2e2e;
-  --border: #3a3a3a;
-  --text: #e6e6e6;
-  --text-dim: #9a9a9a;
-  --accent: #4a9eff;
-  --accent-2: #a78bfa;
-  --danger: #ff6b6b;
-  --ok: #4ade80;
+  --bg: #000000;
+  --bg-soft: #0a0a0a;
+  --card: #0a0a0a;
+  --card-hover: #141414;
+  --border: #262626;
+  --text: #ededed;
+  --text-dim: #8f8f8f;
+  --accent: #ededed;
+  --accent-2: #a1a1a1;
+  --danger: #ff6369;
+  --ok: #0cce6b;
   color-scheme: dark;
 }
 
@@ -956,6 +956,68 @@ html.dark .site-header { border-bottom-color: #3a3a3a; }
 /* 主按钮轻微阴影（深色） */
 html.dark .n-button--primary-type:not(.n-button--disabled) {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* ============ 现代极简风覆盖 ============ */
+
+/* 去掉所有背景 / 元素装饰 */
+html.dark body::before, html.dark body::after { display: none !important; }
+.hero::before { display: none !important; }
+.post-card::before, .post-card::after { display: none !important; }
+.project-card::before, .project-card::after,
+.design-graph::before, .design-graph::after { display: none !important; }
+.page-head h1::after { display: none !important; }
+
+/* 卡片：细边框 + 无阴影，hover 只微变 */
+.post-card, .project-card, .compose-card, .checkin-card, .timeline-card,
+.design-tree, .design-graph, .feature-card, .stat-card, .empty, .auth-card {
+  box-shadow: none !important;
+  border: 1px solid var(--border);
+}
+.post-card, .feature-card, .stat-card { transition: border-color 0.15s, background 0.15s; }
+.post-card:hover, .feature-card:hover, .stat-card:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background: var(--card-hover);
+  border-color: var(--text-dim);
+}
+
+/* 去渐变文字 / 动效 */
+.stat-num, .post-card:hover .post-title, .logo span, .hero-title span {
+  background: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  color: inherit !important;
+}
+.logo span, .hero-title span, .feature-icon { animation: none !important; }
+.progress-fill { box-shadow: none !important; }
+.timeline-dot, .timeline-dot.tl-done, .timeline-dot.tl-overdue, .timeline-dot.tl-today {
+  box-shadow: 0 0 0 3px var(--bg) !important;
+}
+
+/* 大留白 + 精致排版 */
+main.container { padding-top: 44px !important; padding-bottom: 72px !important; }
+.page-head { margin-bottom: 36px !important; }
+.page-head h1 { font-size: 34px !important; font-weight: 700 !important; letter-spacing: -0.5px; }
+.hero { padding: 100px 20px 76px !important; }
+.hero-title { font-size: 54px !important; font-weight: 800 !important; letter-spacing: -1.5px; }
+.post-card { padding: 24px 26px !important; }
+.compose-card { padding: 28px !important; }
+.post-list { gap: 16px !important; }
+.section-title { font-size: 24px !important; margin-bottom: 22px !important; }
+
+/* 导航：纯色极简 */
+.site-header { background: var(--bg) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+html.dark .site-header { border-bottom-color: var(--border) !important; }
+
+/* 按钮圆角 */
+.n-button { border-radius: 8px !important; }
+
+/* primary 按钮：深色下白底黑字 */
+html.dark .n-button--primary-type:not(.n-button--disabled) {
+  --n-text-color: #0a0a0a !important;
+  --n-text-color-hover: #0a0a0a !important;
+  --n-text-color-pressed: #0a0a0a !important;
+  --n-text-color-focus: #0a0a0a !important;
 }
 @media (max-width: 720px) {
   .design-layout { flex-direction: column; }
