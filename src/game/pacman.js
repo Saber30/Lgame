@@ -27,14 +27,26 @@ export const PAC_SPEED = 1.6
 export const DOT_SCORE = 10
 export const CHASE_CHANCE = 0.8
 
-// 幽灵出生点，按顺序启用（关卡越高启用越多）
-const GHOST_SPAWNS = [
-  [17, 1],
-  [1, 13],
-  [17, 13],
-  [1, 7],
+/** 开局/复活后的准备时间（帧），这段时间内谁都不动 */
+export const READY_FRAMES = 90
+/** 追击模式时长（帧） */
+export const CHASE_FRAMES = 600
+
+/**
+ * 散开模式时长：关卡越高越短，逼玩家在有限的安全窗口里推进。
+ * 第 1 关 6 秒，之后每关减 0.7 秒，最低 2 秒。
+ */
+export function scatterFramesFor(level) {
+  return Math.max(120, 360 - (level - 1) * 40)
+}
+
+// 幽灵出生点 / 老家 / 性格，按顺序启用（关卡越高启用越多）
+const GHOSTS = [
+  { col: 17, row: 1, color: '#ff5b5b', home: [17, 1], style: 'direct' },
+  { col: 1, row: 13, color: '#ffb02e', home: [1, 13], style: 'ahead' },
+  { col: 17, row: 13, color: '#4dc9ff', home: [17, 13], style: 'ahead' },
+  { col: 1, row: 7, color: '#ff8ad8', home: [1, 7], style: 'shy' },
 ]
-const GHOST_COLORS = ['#ff5b5b', '#ffb02e', '#4dc9ff', '#ff8ad8']
 
 const DIRS = [
   [1, 0],
@@ -54,7 +66,7 @@ function center(col, row) {
 
 /** 每关幽灵数量：第 1 关 1 只，之后每 2 关加 1 只，最多 4 只 */
 export function ghostCountFor(level) {
-  return Math.min(1 + Math.floor(level / 2), GHOST_SPAWNS.length)
+  return Math.min(1 + Math.floor(level / 2), GHOSTS.length)
 }
 
 /** 幽灵速度随关卡提升，但始终略慢于吃豆人，保证可玩 */
@@ -63,7 +75,7 @@ function ghostSpeedFor(level) {
 }
 
 export function createGame() {
-  const state = { score: 0, level: 1, best: 0, playing: false, gameOver: false, tick: 0 }
+  const state = { score: 0, level: 1, best: 0, playing: false, gameOver: false, paused: false, tick: 0 }
   resetLevel(state, true)
   return state
 }
@@ -102,22 +114,31 @@ export function resetLevel(state, fullReset) {
   state.pac = { x: px, y: py, dx: 0, dy: 0, ndx: 0, ndy: 0, mouth: 0 }
 
   const speed = ghostSpeedFor(state.level)
-  state.ghosts = GHOST_SPAWNS.slice(0, ghostCountFor(state.level)).map(([c, r], i) => {
-    const [gx, gy] = center(c, r)
+  state.ghosts = GHOSTS.slice(0, ghostCountFor(state.level)).map((cfg) => {
+    const [gx, gy] = center(cfg.col, cfg.row)
     return {
-      col: c,
-      row: r,
-      tx: c,
-      ty: r,
+      col: cfg.col,
+      row: cfg.row,
+      tx: cfg.col,
+      ty: cfg.row,
       x: gx,
       y: gy,
       dx: 0,
       dy: 0,
       speed,
-      color: GHOST_COLORS[i % GHOST_COLORS.length],
+      color: cfg.color,
+      home: cfg.home,
+      style: cfg.style,
+      reverse: false,
     }
   })
 
+  state.ready = READY_FRAMES
+  // 开局先散开，给玩家一点吃豆子的缓冲时间（经典吃豆人也是这么设计的）
+  state.mode = 'scatter'
+  state.modeTimer = scatterFramesFor(state.level)
+  state.paused = false
+  state.lastEaten = null
   state.tick = 0
 }
 
@@ -125,6 +146,17 @@ export function start(state) {
   resetLevel(state, true)
   state.playing = true
   state.gameOver = false
+  state.paused = false
+}
+
+export function togglePause(state) {
+  if (!state.playing || state.gameOver) return
+  state.paused = !state.paused
+}
+
+export function setPaused(state, value) {
+  if (!state.playing || state.gameOver) return
+  state.paused = !!value
 }
 
 /** 记录玩家想走的方向，实际转向在能走通时才生效 */
@@ -166,8 +198,44 @@ function updatePac(state) {
     state.grid[r][c] = 0
     state.score += DOT_SCORE
     state.dotsLeft--
+    state.lastEaten = { col: c, row: r }
     if (state.score > state.best) state.best = state.score
+  } else {
+    state.lastEaten = null
   }
+}
+
+/** 切换追击 / 散开模式，切换瞬间幽灵强制掉头（经典规则，也避免卡在角落） */
+function advanceMode(state) {
+  if (state.modeTimer > 0) {
+    state.modeTimer--
+    return
+  }
+  state.mode = state.mode === 'chase' ? 'scatter' : 'chase'
+  state.modeTimer = state.mode === 'chase' ? CHASE_FRAMES : scatterFramesFor(state.level)
+  for (const g of state.ghosts) g.reverse = true
+}
+
+/** 幽灵的追踪目标：散开时回各自老家，追击时按性格选点 */
+function ghostTarget(state, g) {
+  const pc = Math.floor(state.pac.x / CELL)
+  const pr = Math.floor(state.pac.y / CELL)
+
+  if (state.mode === 'scatter') return g.home
+
+  if (g.style === 'ahead') {
+    const dx = state.pac.dx
+    const dy = state.pac.dy
+    if (dx || dy) return [pc + dx * 3, pr + dy * 3]
+    return [pc, pr]
+  }
+
+  if (g.style === 'shy') {
+    const dist = Math.abs(g.col - pc) + Math.abs(g.row - pr)
+    return dist > 7 ? [pc, pr] : g.home
+  }
+
+  return [pc, pr]
 }
 
 /**
@@ -178,6 +246,12 @@ function chooseGhostDir(state, g) {
   const open = DIRS.filter(([dx, dy]) => !isWall(g.col + dx, g.row + dy))
   if (!open.length) return null
 
+  if (g.reverse) {
+    g.reverse = false
+    const back = open.find(([dx, dy]) => dx === -g.dx && dy === -g.dy)
+    if (back) return back
+  }
+
   let cands = open.filter(([dx, dy]) => !(dx === -g.dx && dy === -g.dy))
   if (!cands.length) cands = open
 
@@ -185,9 +259,8 @@ function chooseGhostDir(state, g) {
     return cands[Math.floor(Math.random() * cands.length)]
   }
 
-  const pc = Math.floor(state.pac.x / CELL)
-  const pr = Math.floor(state.pac.y / CELL)
-  const dist = ([dx, dy]) => Math.abs(g.col + dx - pc) + Math.abs(g.row + dy - pr)
+  const [tc, tr] = ghostTarget(state, g)
+  const dist = ([dx, dy]) => Math.abs(g.col + dx - tc) + Math.abs(g.row + dy - tr)
   const best = Math.min(...cands.map(dist))
   const tied = cands.filter((d) => dist(d) === best)
   // 平局随机，避免固定偏向某一侧导致绕圈
@@ -221,15 +294,27 @@ function caught(state) {
 }
 
 /**
- * 推进一帧。返回本帧发生的事件：{ ateDot } / { levelUp } / { caught }
+ * 推进一帧。返回本帧发生的事件：
+ * { ready } / { ateDot, ateDotAt } / { levelUp } / { caught }
  */
 export function stepFrame(state) {
-  if (!state.playing || state.gameOver) return null
+  if (!state.playing || state.gameOver || state.paused) return null
   state.tick++
+
+  if (state.ready > 0) {
+    state.ready--
+    return { ready: true }
+  }
+
+  advanceMode(state)
 
   const before = state.dotsLeft
   updatePac(state)
-  const ev = { ateDot: state.dotsLeft !== before }
+  const ev = {}
+  if (state.dotsLeft !== before) {
+    ev.ateDot = true
+    ev.ateDotAt = state.lastEaten
+  }
 
   if (state.dotsLeft <= 0) {
     state.level++
