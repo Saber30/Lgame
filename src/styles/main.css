@@ -1,33 +1,33 @@
 /* ============ LGame 工作室 · Vue 版全站样式 ============ */
 
 :root {
-  --bg: #f4f6fb;
-  --bg-soft: #e9edf5;
+  --bg: #eef2fa;
+  --bg-soft: #e0e7f5;
   --card: #ffffff;
-  --card-hover: #f8faff;
-  --border: #e2e8f0;
-  --text: #1e293b;
-  --text-dim: #64748b;
-  --accent: #6c5ce7;
-  --accent-2: #0e7490;
+  --card-hover: #f4f8ff;
+  --border: #d2dcee;
+  --text: #0f1729;
+  --text-dim: #56688a;
+  --accent: #0a7cff;
+  --accent-2: #d6258f;
   --danger: #e5484d;
-  --ok: #18a058;
+  --ok: #00a86b;
   --radius: 14px;
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
 }
 
 html.dark {
-  --bg: #0a0e17;
-  --bg-soft: #101828;
-  --card: #141c2e;
-  --card-hover: #1a2438;
-  --border: #263048;
-  --text: #dde5f2;
-  --text-dim: #8a94ab;
-  --accent: #6c5ce7;
-  --accent-2: #00d2ff;
-  --danger: #ff6b81;
-  --ok: #2ed573;
+  --bg: #05070d;
+  --bg-soft: #0a0f1a;
+  --card: #0d1320;
+  --card-hover: #131b2c;
+  --border: #1c2740;
+  --text: #e8f2ff;
+  --text-dim: #7688a8;
+  --accent: #00e5ff;
+  --accent-2: #ff2e88;
+  --danger: #ff3b6b;
+  --ok: #00ff9d;
   color-scheme: dark;
 }
 
@@ -769,7 +769,7 @@ html.dark .post-card:hover { box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35); }
 :root {
   --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
   --shadow-hover: 0 16px 40px rgba(108, 92, 231, 0.18);
-  --grad-accent: linear-gradient(135deg, #6c5ce7 0%, #8f7bff 50%, #00d2ff 100%);
+  --grad-accent: linear-gradient(135deg, #00e5ff 0%, #7b5cff 50%, #ff2e88 100%);
 }
 html.dark {
   --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
@@ -925,6 +925,52 @@ html.dark body::after {
   transition: opacity 0.2s;
 }
 .post-card:hover::before { opacity: 1; }
+
+/* ============ 赛博朋克游戏风 ============ */
+
+/* 深色下：扫描线 + 霓虹光斑背景 */
+html.dark body::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 229, 255, 0.035) 0 1px, transparent 1px 3px),
+    radial-gradient(600px 300px at 85% 12%, rgba(0, 229, 255, 0.12), transparent 60%),
+    radial-gradient(520px 260px at 8% 88%, rgba(255, 46, 136, 0.08), transparent 60%);
+}
+
+/* 霓虹发光标题 / 数字 */
+html.dark .page-head h1 { text-shadow: 0 0 24px rgba(0, 229, 255, 0.35); }
+html.dark .stat-num { filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.45)); }
+
+/* 卡片 hover 霓虹边框 */
+html.dark .post-card:hover,
+html.dark .feature-card:hover,
+html.dark .stat-card:hover {
+  border-color: rgba(0, 229, 255, 0.6);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.3), 0 16px 44px rgba(0, 229, 255, 0.16);
+}
+
+/* HUD 角标（项目卡片 / 策划图谱） */
+.project-card, .design-graph, .checkin-card { position: relative; }
+.project-card::before, .project-card::after,
+.design-graph::before, .design-graph::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--accent);
+  border-style: solid;
+  pointer-events: none;
+  opacity: 0.6;
+}
+.project-card::before, .design-graph::before { top: 7px; left: 7px; border-width: 2px 0 0 2px; }
+.project-card::after, .design-graph::after { bottom: 7px; right: 7px; border-width: 0 2px 2px 0; }
+
+/* 导航栏底部霓虹线 */
+html.dark .site-header { border-bottom-color: rgba(0, 229, 255, 0.25); }
+
+/* 主按钮霓虹发光（深色） */
+html.dark .n-button--primary-type:not(.n-button--disabled) {
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.45);
+}
 @media (max-width: 720px) {
   .design-layout { flex-direction: column; }
   .design-tree { flex: none; width: 100%; max-height: 40vh; }
