@@ -293,6 +293,37 @@ function caught(state) {
   return state.ghosts.some((g) => Math.abs(g.x - p.x) < CELL * 0.7 && Math.abs(g.y - p.y) < CELL * 0.7)
 }
 
+/** 逻辑固定按 60 帧/秒推进 */
+export const LOGIC_STEP_MS = 1000 / 60
+
+/**
+ * 按真实经过时间推进游戏。
+ * 逻辑帧是固定的，所以 144Hz 和 60Hz 的屏幕跑起来速度一样；
+ * 单次最多补 8 帧，切回标签页时不会一次性快进。
+ */
+export function createStepper(state, maxSteps = 8) {
+  let acc = 0
+  return function advance(elapsedMs) {
+    // 时间戳异常或长时间没跑（切标签页、断点调试），只推进一帧
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0 || elapsedMs > 200) elapsedMs = LOGIC_STEP_MS
+    acc += elapsedMs
+
+    const events = []
+    let steps = 0
+    while (acc >= LOGIC_STEP_MS && steps < maxSteps) {
+      const ev = stepFrame(state)
+      acc -= LOGIC_STEP_MS
+      steps++
+      if (!ev) {
+        acc = 0
+        break
+      }
+      events.push(ev)
+    }
+    return events
+  }
+}
+
 /**
  * 推进一帧。返回本帧发生的事件：
  * { ready } / { ateDot, ateDotAt } / { levelUp } / { caught }

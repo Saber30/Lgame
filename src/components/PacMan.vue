@@ -6,10 +6,10 @@ import {
   MAP,
   ROWS,
   createGame,
+  createStepper,
   setDirection,
   setPaused,
   start as startGame,
-  stepFrame,
   togglePause,
 } from '../game/pacman.js'
 
@@ -24,9 +24,11 @@ const gameOver = ref(false)
 const paused = ref(false)
 
 const game = createGame()
+const advance = createStepper(game)
 let ctx = null
 let raf = null
 let savedBest = 0
+let lastTs = 0
 // 静态图层：墙和豆子都不会每帧变化，预先画到离屏画布，每帧只贴两次图
 let wallLayer = null
 let dotLayer = null
@@ -145,14 +147,22 @@ function draw() {
   }
 }
 
-function loop() {
+function loop(ts) {
   raf = null
-  const ev = stepFrame(game)
-  if (ev) {
+  if (typeof ts !== 'number') ts = performance.now()
+  if (!lastTs) lastTs = ts
+  const dt = ts - lastTs
+  lastTs = ts
+
+  const events = advance(dt)
+  let changed = false
+  for (const ev of events) {
     if (ev.ateDotAt) eraseDot(ev.ateDotAt.col, ev.ateDotAt.row)
     if (ev.levelUp) buildDotLayer()
-    syncHud()
+    changed = true
   }
+  if (changed) syncHud()
+
   draw()
   // 只有真正在跑的时候才继续排帧：暂停/结束/未开局时循环会自己停下来
   if (game.playing && !game.paused) schedule()

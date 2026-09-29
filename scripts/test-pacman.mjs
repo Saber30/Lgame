@@ -5,6 +5,7 @@ import {
   DOT_SCORE,
   READY_FRAMES,
   createGame,
+  createStepper,
   isWall,
   scatterFramesFor,
   setDirection,
@@ -332,6 +333,38 @@ console.log('\n[9] 被抓住 → 重开')
   check('重开后幽灵恢复为 1 只', g.ghosts.length === 1, `实际 ${g.ghosts.length}`)
   check('重开后清除暂停状态', g.paused === false)
   check('重开后重置模式', g.mode === 'scatter' && g.ready === READY_FRAMES)
+}
+
+// ---------- 测试 10：固定步长推进（与屏幕刷新率无关）----------
+console.log('\n[10] 固定步长推进（游戏速度不该受屏幕刷新率影响）')
+{
+  const stepsIn = (hz, totalMs) => {
+    const g = createGame()
+    start(g)
+    const advance = createStepper(g)
+    const chunk = 1000 / hz
+    let elapsed = 0
+    let steps = 0
+    while (elapsed < totalMs) {
+      steps += advance(chunk).length
+      elapsed += chunk
+    }
+    return steps
+  }
+  const at60 = stepsIn(60, 5000)
+  const at144 = stepsIn(144, 5000)
+  check('60Hz 屏：5 秒推进约 300 个逻辑帧', Math.abs(at60 - 300) <= 3, `${at60} 帧`)
+  check('144Hz 屏：5 秒推进约 300 个逻辑帧', Math.abs(at144 - 300) <= 3, `${at144} 帧`)
+  check('两种刷新率下速度一致', Math.abs(at60 - at144) <= 3, `${at60} vs ${at144}`)
+
+  const g2 = createGame()
+  start(g2)
+  const advance2 = createStepper(g2)
+  check('切标签页后回来不会一次性快进', advance2(5000).length <= 1, `推进了 ${advance2(5000).length} 帧`)
+
+  const g3 = createGame()
+  const advance3 = createStepper(g3)
+  check('未开局时不推进', advance3(16.7).length === 0)
 }
 
 console.log(failed === 0 ? '\n全部通过 ✅\n' : `\n有 ${failed} 项失败 ❌\n`)
