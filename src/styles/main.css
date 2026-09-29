@@ -1026,6 +1026,14 @@ html.dark .n-button--primary-type:not(.n-button--disabled) {
 
 .app-shell { display: flex; min-height: 100vh; }
 
+/* 动态粒子背景层 */
+.particle-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .sidebar {
   position: fixed;
   left: 0;
