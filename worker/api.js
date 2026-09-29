@@ -195,11 +195,19 @@ async function handleListPosts(url, env, request) {
   const region = url.searchParams.get('region');
   if (region && !['domestic', 'overseas'].includes(region)) fail('地区参数不正确');
 
+  // 搜索关键词：限制长度，并转义 LIKE 通配符（否则用户输入 % 会变成全表匹配）
+  const keyword = (url.searchParams.get('q') || '').trim().slice(0, 50);
+
   let where = category ? "WHERE p.category = ? AND p.status = 'approved'" : "WHERE p.status = 'approved'";
   const args = category ? [category] : [];
   if (region) {
     where += " AND json_extract(p.meta, '$.region') = ?";
     args.push(region);
+  }
+  if (keyword) {
+    const like = '%' + keyword.replace(/[\\%_]/g, (ch) => '\\' + ch) + '%';
+    where += " AND (p.title LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')";
+    args.push(like, like);
   }
 
   const { results } = await env.DB.prepare(

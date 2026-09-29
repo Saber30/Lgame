@@ -7,6 +7,7 @@ import { categoryEmoji, categoryLabel } from '../utils/format'
 import PostCard from '../components/PostCard.vue'
 import PostComposer from '../components/PostComposer.vue'
 import PaginationBar from '../components/PaginationBar.vue'
+import SearchInput from '../components/SearchInput.vue'
 
 const props = defineProps({ category: { type: String, required: true } })
 
@@ -17,6 +18,7 @@ const page = ref(1)
 const total = ref(0)
 const loading = ref(true)
 const error = ref('')
+const keyword = ref('')
 const PAGE_SIZE = 10
 
 const DESCR = {
@@ -29,7 +31,9 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const data = await api.get(`/posts?category=${props.category}&page=${page.value}&pageSize=${PAGE_SIZE}`)
+    const params = new URLSearchParams({ category: props.category, page: String(page.value), pageSize: String(PAGE_SIZE) })
+    if (keyword.value) params.set('q', keyword.value)
+    const data = await api.get('/posts?' + params.toString())
     posts.value = data.posts
     total.value = data.total
   } catch (e) {
@@ -37,6 +41,14 @@ async function load() {
   } finally {
     loading.value = false
   }
+}
+
+function onSearch(value) {
+  if (value === keyword.value) return
+  keyword.value = value
+  page.value = 1
+  load()
+  window.scrollTo(0, 0)
 }
 
 function onCreated(id) {
@@ -58,6 +70,8 @@ onMounted(load)
     <p>{{ DESCR[category] }}</p>
   </div>
 
+  <SearchInput :placeholder="`在${categoryLabel(category)}里搜索…`" @search="onSearch" />
+
   <PostComposer v-if="auth.isLoggedIn" :category="category" @created="onCreated" />
   <div v-else class="login-tip">👉 <router-link to="/login">登录</router-link> 后即可发布内容、参与讨论</div>
 
@@ -66,7 +80,9 @@ onMounted(load)
   <template v-else>
     <div class="post-list">
       <PostCard v-for="p in posts" :key="p.id" :post="p" />
-      <div v-if="!posts.length" class="empty">还没有内容，来发布第一条吧</div>
+      <div v-if="!posts.length" class="empty">
+        {{ keyword ? `没有找到和「${keyword}」相关的内容` : '还没有内容，来发布第一条吧' }}
+      </div>
     </div>
     <PaginationBar :page="page" :total="total" :page-size="PAGE_SIZE" @change="onPageChange" />
   </template>

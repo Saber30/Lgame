@@ -334,7 +334,7 @@ html.dark .post-card:hover { border-color: #3a4767; }
 .loading { text-align: center; color: var(--text-dim); padding: 40px; }
 
 /* ---- 分页 ---- */
-.pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 24px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 24px; flex-wrap: wrap; }
 .pagination span { color: var(--text-dim); font-size: 14px; }
 .pagination button {
   background: var(--card);
@@ -346,6 +346,22 @@ html.dark .post-card:hover { border-color: #3a4767; }
   font-family: var(--font);
 }
 .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+.pagination-jump { display: inline-flex; align-items: center; gap: 6px; }
+.pagination-jump input {
+  width: 58px;
+  padding: 6px 8px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 14px;
+}
+.pagination-total { color: var(--text-dim); font-size: 13px; }
+
+/* ---- 列表搜索框 ---- */
+.search-box { max-width: 420px; margin-bottom: 16px; }
 
 /* ---- 帖子详情 ---- */
 .back-link { display: inline-block; color: var(--text-dim); text-decoration: none; margin-bottom: 16px; font-size: 14px; }

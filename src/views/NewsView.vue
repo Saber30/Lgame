@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import PostCard from '../components/PostCard.vue'
 import PostComposer from '../components/PostComposer.vue'
 import PaginationBar from '../components/PaginationBar.vue'
+import SearchInput from '../components/SearchInput.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -15,6 +16,7 @@ const total = ref(0)
 const loading = ref(true)
 const error = ref('')
 const region = ref('all')
+const keyword = ref('')
 const PAGE_SIZE = 10
 
 const TABS = [
@@ -29,6 +31,7 @@ async function load() {
   try {
     const params = new URLSearchParams({ category: 'news', page: String(page.value), pageSize: String(PAGE_SIZE) })
     if (region.value !== 'all') params.set('region', region.value)
+    if (keyword.value) params.set('q', keyword.value)
     const data = await api.get('/posts?' + params.toString())
     posts.value = data.posts
     total.value = data.total
@@ -43,6 +46,14 @@ function switchRegion(r) {
   region.value = r
   page.value = 1
   load()
+}
+
+function onSearch(value) {
+  if (value === keyword.value) return
+  keyword.value = value
+  page.value = 1
+  load()
+  window.scrollTo(0, 0)
 }
 
 function onCreated(id) {
@@ -76,6 +87,8 @@ onMounted(load)
     </button>
   </div>
 
+  <SearchInput placeholder="搜索新闻标题或内容…" @search="onSearch" />
+
   <PostComposer v-if="auth.isLoggedIn" category="news" @created="onCreated" />
   <div v-else class="login-tip">👉 <router-link to="/login">登录</router-link> 后即可发布新闻、参与讨论</div>
 
@@ -84,7 +97,9 @@ onMounted(load)
   <template v-else>
     <div class="post-list">
       <PostCard v-for="p in posts" :key="p.id" :post="p" />
-      <div v-if="!posts.length" class="empty">还没有新闻，稍后再来看看</div>
+      <div v-if="!posts.length" class="empty">
+        {{ keyword ? `没有找到和「${keyword}」相关的新闻` : '还没有新闻，稍后再来看看' }}
+      </div>
     </div>
     <PaginationBar :page="page" :total="total" :page-size="PAGE_SIZE" @change="onPageChange" />
   </template>
