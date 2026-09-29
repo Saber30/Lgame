@@ -88,11 +88,17 @@ lgame/
 ### 跑测试
 
 ```bash
-npm test        # 吃豆人逻辑：幽灵追击、过关循环、被抓住重开
+npm test        # 吃豆人逻辑 + 搜索 SQL 与转义（用本地 SQLite，不需要网络）
 ```
 
 游戏逻辑集中在 `src/game/pacman.js`，与渲染解耦，所以能直接在 Node 里跑完整对局，
 不需要开浏览器。改完幽灵 AI 或关卡规则后先跑一遍再提交。
+
+搜索接口改完后，可以再跑一次线上冒烟检查（会真的请求线上接口）：
+
+```bash
+node scripts/check-search-live.mjs
+```
 
 ## 3. 环境搭建（本地开发）
 
