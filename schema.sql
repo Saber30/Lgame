@@ -109,3 +109,16 @@ CREATE TABLE IF NOT EXISTS design_docs (
   updated_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_design_parent ON design_docs(parent_id);
+
+-- 策划文档关联表（知识图谱：文档之间的关系）
+CREATE TABLE IF NOT EXISTS design_links (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_id INTEGER NOT NULL,                       -- 源文档
+  to_id INTEGER NOT NULL,                         -- 目标文档
+  relation TEXT NOT NULL DEFAULT 'relates',       -- depends(依赖)/references(参考)/affects(影响)/relates(相关)
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(from_id, to_id, relation)
+);
+CREATE INDEX IF NOT EXISTS idx_design_links_from ON design_links(from_id);
+CREATE INDEX IF NOT EXISTS idx_design_links_to ON design_links(to_id);

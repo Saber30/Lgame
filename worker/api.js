@@ -775,6 +775,37 @@ async function handleDeleteDesignDoc(request, env, id) {
   return json({ ok: true });
 }
 
+async function handleListDesignLinks(request, env) {
+  await requireUser(request, env);
+  const { results } = await env.DB.prepare(
+    'SELECT id, from_id, to_id, relation FROM design_links ORDER BY id ASC'
+  ).all();
+  return json({ links: results });
+}
+
+async function handleCreateDesignLink(request, env) {
+  const user = await requireUser(request, env);
+  const body = await readJson(request);
+  const fromId = Number(body.from_id);
+  const toId = Number(body.to_id);
+  const relation = String(body.relation || 'relates').trim();
+  if (!Number.isInteger(fromId) || !Number.isInteger(toId)) fail('参数错误');
+  if (fromId === toId) fail('不能关联到自己');
+  if (!['depends', 'references', 'affects', 'relates'].includes(relation)) fail('关系类型不正确');
+  const insert = await env.DB.prepare(
+    'INSERT OR IGNORE INTO design_links (from_id, to_id, relation, created_by) VALUES (?, ?, ?, ?)'
+  )
+    .bind(fromId, toId, relation, user.id)
+    .run();
+  return json({ id: insert.meta.last_row_id, message: '已关联' }, 201);
+}
+
+async function handleDeleteDesignLink(request, env, id) {
+  await requireUser(request, env);
+  await env.DB.prepare('DELETE FROM design_links WHERE id = ?').bind(id).run();
+  return json({ ok: true });
+}
+
 async function handleStats(request, env) {
   await requireAdmin(request, env);
   const { c: users } = await env.DB.prepare('SELECT COUNT(*) AS c FROM users').first();
@@ -830,6 +861,10 @@ export async function handleApi(request, env) {
       if (seg[0] === 'design-docs') {
         if (method === 'GET') return await handleListDesignDocs(request, env);
         if (method === 'POST') return await handleCreateDesignDoc(request, env);
+      }
+      if (seg[0] === 'design-links') {
+        if (method === 'GET') return await handleListDesignLinks(request, env);
+        if (method === 'POST') return await handleCreateDesignLink(request, env);
       }
       if (seg[0] === 'files' && method === 'POST') return await handleFileUpload(request, env);
     }
@@ -890,6 +925,12 @@ export async function handleApi(request, env) {
       if (!Number.isInteger(id)) fail('参数错误');
       if (method === 'PATCH') return await handleUpdateDesignDoc(request, env, id);
       if (method === 'DELETE') return await handleDeleteDesignDoc(request, env, id);
+    }
+
+    if (seg[0] === 'design-links' && seg.length === 2 && method === 'DELETE') {
+      const id = Number(seg[1]);
+      if (!Number.isInteger(id)) fail('参数错误');
+      return await handleDeleteDesignLink(request, env, id);
     }
 
     return json({ error: '接口不存在' }, 404);
