@@ -14,6 +14,7 @@ const MENU = [
   { to: '/daily', label: '工作日报', icon: '📝' },
   { to: '/timeline', label: '项目时间线', icon: '🗓️' },
   { to: '/design', label: '策划案', icon: '📋' },
+  { to: '/game', label: '小游戏', icon: '🎮' },
 ]
 
 const ADMIN_MENU = [

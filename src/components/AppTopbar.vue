@@ -14,6 +14,7 @@ const TITLES = {
   '/daily': '工作日报',
   '/timeline': '项目时间线',
   '/design': '策划案',
+  '/game': '小游戏',
   '/report': '周报月报',
   '/admin': '管理后台',
   '/login': '登录',
